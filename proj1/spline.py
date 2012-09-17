@@ -1,42 +1,49 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-#
-#  untitled.py
+# Group: Björn Lennernäs, Tobias-Alex Petersen, Johnny Sjöberg, Andy V
 #  
-#  Copyright 2012 Bjorn <bjorn@bjorn-Vostro-460>
-#  
-#  This program is free software; you can redistribute it and/or modify
-#  it under the terms of the GNU General Public License as published by
-#  the Free Software Foundation; either version 2 of the License, or
-#  (at your option) any later version.
-#  
-#  This program is distributed in the hope that it will be useful,
-#  but WITHOUT ANY WARRANTY; without even the implied warranty of
-#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#  GNU General Public License for more details.
-#  
-#  You should have received a copy of the GNU General Public License
-#  along with this program; if not, write to the Free Software
-#  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
-#  MA 02110-1301, USA.
-#  
-#  
+
+
 from  __future__  import division
 from  scipy       import *
 from  matplotlib.pyplot import *
+import sys
 
 class Spline(object):
-	def __init__(self):
-		
+	
+	"""
+	Sets up an equidistant knot sequence
+	"""
+	def __init__(self,start=0.0,stop=5.0, res=0.1):
+		self.start = start
+		self.stop  = stop
+		self.res   = res
+		self.knots = append([self.start,self.start],arange(\
+							self.start,self.stop,self.res))
+		self.knots = append(self.knots,[self.stop,self.stop])
+		print self.knots
 
+	"""
+	Evaluates the spline at u. 
+	"""
 	def __call__(self, u):
-		
+		pass
 		
 	def plot(self):
+		pass
 		
 
+"""
+Makes an instance. If running from a terminal up to three numerical
+arguments can be passes, e.g. > python spline.py 1.0,2.0,0.1, to override
+the default values set by the __init__ for the spline class.
+"""
 def main():
-	
+	args = (str(sys.argv[1])).split(',')
+	attr = []
+	for i in range(len(args)-1):
+		attr =  append(attr, float(args[i+1]))
+	sp = Spline(*attr)
 	return 0
 
 if __name__ == '__main__':
