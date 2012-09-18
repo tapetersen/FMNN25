@@ -3,35 +3,35 @@
 # Group: Björn Lennernäs, Tobias-Alex Petersen, Johnny Sjöberg, Andy V
 #  
 
-
 from  __future__  import division
 from  scipy       import *
 from  matplotlib.pyplot import *
 import sys
 
 class Spline(object):
-	
-	"""
-	Sets up an equidistant knot sequence
-	"""
-	def __init__(self,start=0.0,stop=5.0, res=0.1):
-		self.start = start
-		self.stop  = stop
-		self.res   = res
-		self.knots = append([self.start,self.start],arange(\
-							self.start,self.stop,self.res))
-		self.knots = append(self.knots,[self.stop,self.stop])
-		print self.knots
+    """
+    Sets up an equidistant knot sequence
+    """
+    def __init__(self, xs, u=None):
+        self.xs = c_[xs[0],xs[0],xs,xs[-1],xs[-1]];
+        if u is None:
+            self.u = arange(0, 1, 1/len(xs))
+        self.u = r_[u[0],u[0],u,u[-1],u[-1]];
 
-	"""
-	Evaluates the spline at u. 
-	"""
-	def __call__(self, u):
-		pass
-		
-	def plot(self):
-		pass
-		
+    """
+    Evaluates the spline at u. 
+    """
+    def __call__(self, u):
+        I = __hot(u)
+        d = self.xs[I-2:I+3]
+        for i in range(3):
+            alpha = 
+
+        pass
+        
+    def plot(self):
+        pass
+        
 
 """
 Makes an instance. If running from a terminal up to three numerical
@@ -39,30 +39,11 @@ arguments can be passes, e.g. > python spline.py 1.0,2.0,0.1, to override
 the default values set by the __init__ for the spline class.
 """
 def main():
-	args = (str(sys.argv[1])).split(',')
-	attr = []
-	for i in range(len(args)-1):
-		attr =  append(attr, float(args[i+1]))
-	sp = Spline(*attr)
-	return 0
+    a = c_[arange(5), arange(5,0,-1)]
+    sp = Spline(a)
+    print sp.xs, sp.u
+    return 0
 
 if __name__ == '__main__':
-	main()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    main()
 
