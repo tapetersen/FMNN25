@@ -20,7 +20,10 @@ class Spline(object):
             xs = interpolate(xs)
         self.xs = xs
         
-    def interpolate(self,xs):
+    def interpolate(self, xs):
+
+
+
         pass
         
 
@@ -29,7 +32,6 @@ class Spline(object):
             alpha  = float(self.u[maxI] - u)/float(self.u[maxI]-self.u[minI])
         except ZeroDivisionError:
             return d[j+1]
-        print minI, maxI, j
         #alpha = 1- u
         #print "alpha = Umax - u / Umax - Umin " + " = " + \
         #"(" + str(self.u[maxI]) + " - " + str(u) + ")/" + "(" +\
@@ -45,15 +47,29 @@ class Spline(object):
     Evaluates the spline at u. 
     """
     def __call__(self, u):
-        I  = searchsorted(self.u, u)-1
+
+        I = searchsorted(self.u, u)-1
+        try:
+            it = iter(u) # check if iterable
+            result = empty((size(u), self.xs.shape[1]))
+            for i, u_ in enumerate(u):
+                result[i] = self.__eval(u_, I[i])
+            return result
+        except TypeError:
+            return self.__eval(u, I)
+
+    def __eval(self, u, I):
+        if u == self.u[0]:
+            return self.xs[0]
+
+        # initalize blossoms
         d  = self.xs[I-2:I+2].copy()
-        print "u: " + str(u)
-        print "Index: " + str(I)
+
         for i in range(3):
             for j in range(0, 3-i):
                 #print "\n(minI,maxI) = " + str([2*i + j - 2 + I,j + 1 + i + I])
-                k = self.__coeff(i - 2 + j + I,
-                               j + 1 + I, u, d, j)
+                k = self.__coeff(I + i - 2 + j ,
+                               I + j + 1 , u, d, j)
                 #print "k: " + str(k)  
                 d[j] = array(k)
                 #if(d[j,0] < 0):
@@ -63,16 +79,12 @@ class Spline(object):
         
         
     def plot(self):
-        over = linspace(.01,.99,20)
-        points = empty([len(over),2])
-        for i in range(len(over)):
-             points[i] = self(over[i])
-        plot(self.xs[:,0],self.xs[:,1],'*')
-        plot(points[:,0],points[:,1],'+')
+        over = linspace(self.u[0], self.u[-1], 200)
+        points = self(over)
+        plot(self.xs[:,0],self.xs[:,1], '*')
+        plot(points[:,0],points[:,1], '+')
         show()
         
-        
-    
 def basisFunction(knots,j):
     d = empty([len(knots)-2])
     d[:] = 0
@@ -80,10 +92,10 @@ def basisFunction(knots,j):
     return Spline(d,knots)
     
 def test():
-    t = linspace(.001,.9,55)
+    t = linspace(u[0], u[-1])
     points = empty([len(t),2])
     for i in range(0,10):
-        b = basisFunction(linspace(0,1,100),i*10)
+        b = basisFunction(t,i*10)
         for i in range(len(t)):
             points[i] = b(t[i])
         plot(points[:,0],points[:,1])
