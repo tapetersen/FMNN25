@@ -18,8 +18,7 @@ class Spline(object):
         self.u = r_[u[0], u[0] ,u , u[-1], u[-1]]
         if(interpol):
             xs = interpolate(xs)
-        self.xs = append(append(array([xs[0],xs[0]]), xs,
-                                0),array([xs[-1],xs[-1]]),0) 
+        self.xs = xs
         
     def interpolate(self,xs):
         pass
@@ -30,6 +29,7 @@ class Spline(object):
             alpha  = float(self.u[maxI] - u)/float(self.u[maxI]-self.u[minI])
         except ZeroDivisionError:
             return d[j+1]
+        print minI, maxI, j
         #alpha = 1- u
         #print "alpha = Umax - u / Umax - Umin " + " = " + \
         #"(" + str(self.u[maxI]) + " - " + str(u) + ")/" + "(" +\
@@ -45,15 +45,15 @@ class Spline(object):
     Evaluates the spline at u. 
     """
     def __call__(self, u):
-        I  = self.__hot(u)
+        I  = searchsorted(self.u, u)-1
         d  = self.xs[I-2:I+2].copy()
         print "u: " + str(u)
         print "Index: " + str(I)
         for i in range(3):
             for j in range(0, 3-i):
                 #print "\n(minI,maxI) = " + str([2*i + j - 2 + I,j + 1 + i + I])
-                k = self.__coeff(2*i + j - 2 + I,
-                               j + 1 + i + I, u, d, j)
+                k = self.__coeff(i - 2 + j + I,
+                               j + 1 + I, u, d, j)
                 #print "k: " + str(k)  
                 d[j] = array(k)
                 #if(d[j,0] < 0):
@@ -72,18 +72,6 @@ class Spline(object):
         show()
         
         
-    """
-    Couldn't find a fast built in function, is there one? 
-    """
-    def __hot(self,u):
-        # Check if u is in the interval, otherwhise return a value
-        # indicating an error.
-        if(u < self.u[0] or u> self.u[-1]):
-            return -1
-
-        for (i, ui) in enumerate(self.u):
-            if(ui > u):
-                return i-1
     
 def basisFunction(knots,j):
     d = empty([len(knots)-2])
