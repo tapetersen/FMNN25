@@ -37,6 +37,7 @@ class Spline(object):
         # matrix can be computed more efficiently
         if(self.equi):
             # Add efficient computation here
+            return xs
         else:
             p = (self.u + append(self.u[1:],[0.0])+ append(self.u[2:],[0.0,0.0]))/3.0
             a = empty([len(xs),len(xs)])
