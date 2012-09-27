@@ -23,7 +23,7 @@ class Tester(object):
 			for j in range(12):
 				b = sp.basisFunction(u,j)
 				s[i] = s[i] + b(u[i])
-		b = abs(s[:,:] - 1.0) < 10.0**-15
+		b = abs(s[:,:] - 1.0) < finfo(double).eps #machine epsilon
 		print b,s,sum(b)
 		assert(sum(sum(b))==20)
 		# the sum of the basis functions should add up to one

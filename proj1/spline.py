@@ -87,8 +87,6 @@ class Spline(object):
             for j in range(0, 3-i):
                 d[j] = self.__coeff(I + i - 2 + j ,
                                I + j + 1 , u, d, j)
-        if(float(d[0][0]) > 10**8):
-			raise Exception()
         return d[0]
         
         
@@ -101,8 +99,7 @@ class Spline(object):
         show()
         
 def basisFunction(knots,j):
-    d = empty([len(knots)+2,2])
-    d[:] = array([0,0])
+    d = zeros([len(knots)+2,2])
     d[j] = array([1,1])
     return Spline(d,knots)
     
