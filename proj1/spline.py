@@ -19,6 +19,7 @@ class Spline(object):
             u = linspace(0, 1, len(xs)-2)
         self.u = r_[u[0], u[0] ,u , u[-1], u[-1]]
         if(interpol):
+            self.interpPoints=xs
             xs = self.interpolate(xs)
         self.xs = xs
         
@@ -35,22 +36,24 @@ class Spline(object):
         b_y = xs[:,1]
         # Check if we have an equidistant knot sequence, if yes then the
         # matrix can be computed more efficiently
-        if(self.equi):
+        if(not self.equi):
             # Add efficient computation here
             return xs
         else:
-            p = (self.u + append(self.u[1:],[0.0])+ append(self.u[2:],[0.0,0.0]))/3.0
-            a = empty([len(xs),len(xs)])
+            p = (self.u[0:-2]+self.u[1:-1]+self.u[2:])/3.0
+            a = zeros([len(xs),len(xs)])
+            k = array([0.0,0.0])
             for i in range(len(xs)):
                 for j in range(len(xs)):
-                    b = basisFunction(linspace(0, 1, len(xs)-2),j)
-                    a[i,j] = b(p[i])
-            print a
-        ab_x = dot(a,b_x)
-        ab_y = dot(a,b_y)
+                    b = basisFunction(self.u[2:-1],j)
+                    k = b(p[i])
+                    a[i,j] = k[0] 
+            #print "u: " + str(self.u)
+            #print "p: " + str(p),"\na:\n "+str(a)
+        
         d = empty([len(xs),2])            
-        d[:,0] = lg.solve_banded([3, 4],ab_x,b_x)
-        d[:,1] = lg.solve_banded([3, 4],ab_y,b_y)
+        d[:,0] = lg.solve(a,b_x)
+        d[:,1] = lg.solve(a,b_y)
         return d
 
     def __coeff(self, minI, maxI, u, d, j):
@@ -94,6 +97,7 @@ class Spline(object):
         over = linspace(self.u[0], self.u[-1], 200)
         points = self(over)
         plot(self.xs[:,0],self.xs[:,1], '*')
+        plot(self.interpPoints[:,0],self.interpPoints[:,1], '^')
         plot(points[:,0],points[:,1], '+')
         plot(points[:,0],points[:,1], linewidth=1)
         show()
