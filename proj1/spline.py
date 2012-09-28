@@ -39,10 +39,7 @@ class Spline(object):
         equation system. 
         Can be extended to provide a more efficient computation for
         equidistand knots. 
-        """    
-        b_x = xs[:,0]
-        b_y = xs[:,1]
-        
+        """   
         p = (self.u[0:-2]+self.u[1:-1]+self.u[2:])/3.0
         a = zeros([len(xs),len(xs)])
         for i in range(len(xs)):
@@ -51,8 +48,8 @@ class Spline(object):
                 a[i,j] = b(p[i])[0]
                 
         d = zeros([len(xs),2])            
-        d[:,0] = lg.solve(a,b_x)
-        d[:,1] = lg.solve(a,b_y)
+        d[:,0] = lg.solve(a,xs[:,0])
+        d[:,1] = lg.solve(a,xs[:,1])
         return d
 
     def __coeff(self, minI, maxI, u, d, j):
@@ -145,7 +142,9 @@ def test():
 
 def main():
     #a = array([[0.,0.], [1.,2.], [1.5,1.5],[1.75,1.5],[2.,1.],[3.,0.]])
-    a = array(mat('0.,0.; 1.,1.3; 2.,2.9; 3.,5.; 4.,2.; 3.,0.; 2.,-1.2;0.,0.'))
+    #a = array(mat('0.,0.; 1.,1.3; 2.,2.9; 3.,5.; 4.,2.; 3.,0.; 2.,-1.2;0.,0.'))
+    a = array(mat('1.,0.;1.,2.;2.5,2.;0.5,4.5;1.5,7.5;0.5,2.75;-.5,7.50;0.5,4.5;-1.5,2.0;0.,2.;0.,.0'))
+    
     s = Spline(a,interpol = True)
     s.plot()
 
