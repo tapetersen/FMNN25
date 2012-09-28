@@ -11,52 +11,60 @@ import sys
 
 class Spline(object):
     """
-    Sets up an equidistant knot sequence
+    Class for handling splines using the blossom method to caluclate
+    points. Also provides interpolation and plotting. 
     """
+    
     def __init__(self, xs, u=None,interpol = False):
-        self.equi = u is None
+        """
+        If the knot sequence isn't specified then an equidistant knot
+        sequence u \in [0,1] is set up.
+        """
         if u is None:
             u = linspace(0, 1, len(xs)-2)
-        self.u = r_[u[0], u[0] ,u , u[-1], u[-1]]
+        self.u = r_[u[0], u[0] ,u , u[-1], u[-1]] #padding
         if(interpol):
-            self.interpPoints=xs
+            self.interpPoints=xs #We like to see the old points. 
             xs = self.interpolate(xs)
+        else:
+            self.interpPoints=None
         self.xs = xs
         
-    """
-    When initilizing the spline, if interpol was set then the provided
-    points are not interpreted as control points but as points through
-    which the curve should pass. This method solves the resulting
-    equation system. 
-    """    
+    
     def interpolate(self, xs):
-        # TODO: check assumption on the size of u, we need at least 3
-        # points i'd guess
+        """
+        When initilizing the spline, if interpol was set then the provided
+        points are not interpreted as control points but as points through
+        which the curve should pass. This method solves the resulting
+        equation system. 
+        Can be extended to provide a more efficient computation for
+        equidistand knots. 
+        """    
         b_x = xs[:,0]
         b_y = xs[:,1]
-        # Check if we have an equidistant knot sequence, if yes then the
-        # matrix can be computed more efficiently
-        if(not self.equi):
-            # Add efficient computation here
-            return xs
-        else:
-            p = (self.u[0:-2]+self.u[1:-1]+self.u[2:])/3.0
-            a = zeros([len(xs),len(xs)])
-            k = array([0.0,0.0])
-            for i in range(len(xs)):
-                for j in range(len(xs)):
-                    b = basisFunction(self.u[2:-1],j)
-                    k = b(p[i])
-                    a[i,j] = k[0] 
-            #print "u: " + str(self.u)
-            #print "p: " + str(p),"\na:\n "+str(a)
         
+        p = (self.u[0:-2]+self.u[1:-1]+self.u[2:])/3.0
+        a = zeros([len(xs),len(xs)])
+        k = array([0.0,0.0])
+        for i in range(len(xs)):
+            for j in range(len(xs)):
+                b = basisFunction(self.u[2:-1],j)
+                k = b(p[i])
+                a[i,j] = k[0] 
+                
         d = empty([len(xs),2])            
         d[:,0] = lg.solve(a,b_x)
         d[:,1] = lg.solve(a,b_y)
         return d
 
     def __coeff(self, minI, maxI, u, d, j):
+        """
+        Used to calculate an entry in the blossom algorithm.
+        min/maxI - current index for the knot sequence.
+        u - point where the curve is  calculated.
+        d - vector with relevant entries in the blossom
+        j - index to d-vector
+        """
         try:
             alpha  = float(self.u[maxI] - u)/float(self.u[maxI]-self.u[minI])
         except ZeroDivisionError:
@@ -64,11 +72,12 @@ class Spline(object):
         return alpha*d[j] + (1 - alpha)*d[j+1]
         
         
-    """
-    Evaluates the spline at u. 
-    """
+    
     def __call__(self, u):
-
+        """
+        Evaluates the spline at u. 
+        Can handle vector form of u. 
+        """
         I = searchsorted(self.u, u)-1
         try:
             it = iter(u) # check if iterable
@@ -80,6 +89,10 @@ class Spline(object):
             return self.__eval(u, I)
 
     def __eval(self, u, I):
+        """
+        Evaluates the spline at a single point u. Help method to __call__
+        I - u:s blossom index.
+        """
         if u == self.u[0]:
             return self.xs[0]
 
@@ -94,20 +107,34 @@ class Spline(object):
         
         
     def plot(self):
+        """
+        Basic plot method. Plots point and control points by default.
+        If interpolation was choosen then the old points, interpolation
+        points, are plotted as well.
+        """
         over = linspace(self.u[0], self.u[-1], 200)
         points = self(over)
         plot(self.xs[:,0],self.xs[:,1], '*')
-        plot(self.interpPoints[:,0],self.interpPoints[:,1], '^')
+        if(self.interpPoints is not None):
+            plot(self.interpPoints[:,0],self.interpPoints[:,1], '^')
         plot(points[:,0],points[:,1], '+')
         plot(points[:,0],points[:,1], linewidth=1)
         show()
         
 def basisFunction(knots,j):
+    """
+    Constructs a spline which can be used to determine the 
+    j:th basic function for the knot sequence knot.
+    Returns a new Spline instance with the relevant unit vector set
+    as control point. 
+    """
     d = zeros([len(knots)+2,2])
     d[j] = array([1,1])
     return Spline(d,knots)
     
 def test():
+    """ Plots a few basic functions.
+    """
     t = linspace(0,1,200)
     points = empty([len(t),2])
     for i in range(5):

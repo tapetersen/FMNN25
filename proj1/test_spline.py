@@ -10,13 +10,9 @@ import spline as sp
 
 class Tester(object):
     
-    #def __init__(self):
-        #pass
-        
-    #def testSu(self):
-        #assert('b' == 'b')
 
 	def test_SumsUpToOne(self):
+		# the sum of the basis functions should add up to one
 		s = zeros([10,2])
 		u = linspace(0,1,10)
 		for i in range(10):
@@ -25,8 +21,8 @@ class Tester(object):
 				s[i] = s[i] + b(u[i])
 		b = abs(s[:,:] - 1.0) < finfo(double).eps #machine epsilon
 		print b,s,sum(b)
-		assert(sum(sum(b))==20)
-		# the sum of the basis functions should add up to one
+		assert(sum(b)==20)
+		
 		
 
 	def test_vandermonde(slef):
