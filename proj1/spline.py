@@ -40,12 +40,11 @@ class Spline(object):
         Can be extended to provide a more efficient computation for
         equidistand knots. 
         """   
-        p = (self.u[0:-2]+self.u[1:-1]+self.u[2:])/3.0
         a = zeros([len(xs),len(xs)])
         for i in range(len(xs)):
             for j in range(len(xs)):
                 b = basisFunction(self.u[2:-1],j)
-                a[i,j] = b(p[i])[0]
+                a[i,j] = b((self.u[i]+self.u[i+1]+self.u[i+2])/3.0)[0]
         return lg.solve(a,xs)
 
     def __coeff(self, minI, maxI, u, d, j):
