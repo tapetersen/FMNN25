@@ -50,7 +50,7 @@ class Spline(object):
                 b = basisFunction(self.u[2:-1],j)
                 a[i,j] = b(p[i])[0]
                 
-        d = empty([len(xs),2])            
+        d = zeros([len(xs),2])            
         d[:,0] = lg.solve(a,b_x)
         d[:,1] = lg.solve(a,b_y)
         return d
