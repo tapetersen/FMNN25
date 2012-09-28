@@ -46,11 +46,7 @@ class Spline(object):
             for j in range(len(xs)):
                 b = basisFunction(self.u[2:-1],j)
                 a[i,j] = b(p[i])[0]
-                
-        d = zeros([len(xs),2])            
-        d[:,0] = lg.solve(a,xs[:,0])
-        d[:,1] = lg.solve(a,xs[:,1])
-        return d
+        return lg.solve(a,xs)
 
     def __coeff(self, minI, maxI, u, d, j):
         """
