@@ -17,8 +17,14 @@ class Spline(object):
     
     def __init__(self, xs, u=None,interpol = False):
         """
-        If the knot sequence isn't specified then an equidistant knot
-        sequence u \in [0,1] is set up.
+        Constructor for the class. The attributes of the object (the 
+        control points and the knot sequence) are set here.
+        xs- Are either control points or interpolation points - see 
+        interpol for more info
+        u - the knot sequence. If the knot sequence isn't specified 
+        then an equidistant knot sequence u \in [0,1] is set up.
+        interpol - If True, then xs are interpolation points, otherwise
+        they are control points.
         """
         if u is None:
             u = linspace(0, 1, len(xs)-2)
@@ -29,8 +35,34 @@ class Spline(object):
         else:
             self.interpPoints=None
         self.xs = xs
-        
-    
+
+    def getKnots(self):
+        """
+        Returns the knot sequence
+        """
+        return self.u;
+
+    def vandermond(self,xs):
+        """
+        Generates and returns the vandermond matrix, mostly used for testing
+        might also dazzle the interested user if the user wants to understand the structure of the
+        mathematical system being solved.
+
+        Might also intimidate the user, which is always fun.
+        This is probably less efficient code, but more readable
+        """
+
+        a = zeros([len(xs),len(xs)])
+        xi = (self.u[:-2]+self.u[1:-1]+self.u[2:])/3
+
+        N = [basisFunction(self.u[2:-1], j) for j in range(len(xs))]
+
+        for i in range(len(xs)):
+            for j in range(len(xs)):
+                q = N[j](xi[i])
+                a[i,j] = q[0]
+        return a
+
     def interpolate(self, xs):
         """
         When initilizing the spline, if interpol was set then the provided
@@ -38,13 +70,18 @@ class Spline(object):
         which the curve should pass. This method solves the resulting
         equation system. 
         Can be extended to provide a more efficient computation for
-        equidistand knots. 
+        equidistant knots. We are however a little too short on time.
         """   
-        a = zeros([len(xs),len(xs)])
-        for i in range(len(xs)):
-            for j in range(len(xs)):
-                b = basisFunction(self.u[2:-1],j)
-                a[i,j] = b((self.u[i]+self.u[i+1]+self.u[i+2])/3.0)[0]
+#        Working code, but hard to read
+#        -----------------------------------------------
+#        a = zeros([len(xs),len(xs)])
+#        for i in range(len(xs)):
+#            for j in range(len(xs)):
+#                b = basisFunction(self.u[2:-1],j)
+#                a[i,j] = b((self.u[i]+self.u[i+1]+self.u[i+2])/3.0)[0]
+
+#       Better code - more readable, less efficient probably but meh.        
+        a = self.vandermond(xs);
         return lg.solve(a,xs)
 
     def __coeff(self, minI, maxI, u, d, j):
@@ -98,15 +135,23 @@ class Spline(object):
         
     def plot(self):
         """
-        Basic plot method. Plots point and control points by default.
+        Basic plot method. Plots point, control points and the control 
+        polygon by default.
         If interpolation was choosen then the old points, interpolation
         points, are plotted as well.
         """
         over = linspace(self.u[0], self.u[-1], 200)
         points = self(over)
-        plot(self.xs[:,0],self.xs[:,1], '*')
+
+        # The control points makes no sense without the control polygon,
+        # So the control polygon is plotted, even if it obscures certain complex curves
+        # Future: Allow the user to turn the control polygon ON/OFF, with the default value being ON
+
+        plot(self.xs[:,0],self.xs[:,1], '-.*') 
+
         if(self.interpPoints is not None):
             plot(self.interpPoints[:,0],self.interpPoints[:,1], '^')
+
         plot(points[:,0],points[:,1], '+')
         plot(points[:,0],points[:,1], linewidth=1)
         show()
@@ -123,7 +168,8 @@ def basisFunction(knots,j):
     return Spline(d,knots)
     
 def test():
-    """ Plots a few basic functions.
+    """ 
+    Plots a few basic functions.
     """
     t = linspace(0,1,200)
     points = empty([len(t),2])
@@ -139,7 +185,6 @@ def main():
     #a = array([[0.,0.], [1.,2.], [1.5,1.5],[1.75,1.5],[2.,1.],[3.,0.]])
     #a = array(mat('0.,0.; 1.,1.3; 2.,2.9; 3.,5.; 4.,2.; 3.,0.; 2.,-1.2;0.,0.'))
     a = array(mat('1.,0.;1.,2.;2.5,2.;0.5,4.5;1.5,7.5;0.5,2.75;-.5,7.50;0.5,4.5;-1.5,2.0;0.,2.;0.,.0'))
-    
     s = Spline(a,interpol = True)
     s.plot()
 
