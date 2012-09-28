@@ -45,12 +45,10 @@ class Spline(object):
         
         p = (self.u[0:-2]+self.u[1:-1]+self.u[2:])/3.0
         a = zeros([len(xs),len(xs)])
-        k = array([0.0,0.0])
         for i in range(len(xs)):
             for j in range(len(xs)):
                 b = basisFunction(self.u[2:-1],j)
-                k = b(p[i])
-                a[i,j] = k[0] 
+                a[i,j] = b(p[i])[0]
                 
         d = empty([len(xs),2])            
         d[:,0] = lg.solve(a,b_x)
