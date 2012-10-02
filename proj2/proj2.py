@@ -67,8 +67,8 @@ class FunctionTransforms(object):
                 hess[i,j] = grad1[i] + grad2[j]
         # Symmetrizing step. 
         hess = 0.5*hess + 0.5*transpose(hess)
-        L = cholesky(hess) # Raises LinAlgError if (but not only if,
-                           # I guess), if hess isn't positive definite.
+        #L = cholesky(hess) # Raises LinAlgError if (but not only if,
+                           ## I guess), if hess isn't positive definite.
         return hess
 
     def __call__(self, x):
