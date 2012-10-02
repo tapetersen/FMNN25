@@ -22,16 +22,30 @@ class FunctionTransforms(object):
     """
     
     
-    def __init__(self, function, gradient = False, hessian = False):
+    def __init__(self, function, dimension,
+                 gradient = False, hessian = False):
         if( not (gradient or hessian)):
             raise Exception("you must specify a transform")
         self.grad = gradient
         self.hess = hessian
         self.f    = function
+        self.dim  = dimension
 
+    """Approximates the gradient using (central) finite differences 
+    of degree 1
+    """
     def gradient(self,x):
-        pass
+        grad = zeros(self.dim)
+        h    = 1e-5 
+        for i in range(self.dim)
+            grad[i] = (self.f(x+h*.5) - self.f(x-h*.5))/h
+        return grad
 
+    """ Approximates the hessian using (central) finite differences 
+    of degree 1. 
+    A symmtrizing step: hessian = .5*(hessian + hessian^T) is
+    also performed
+    """
     def hessian(self,x):
         pass
 
@@ -44,14 +58,24 @@ class FunctionTransforms(object):
         raise Exception("Transform incompletely specified")
 
 class OptimizationProblem(object):
+    """ Provides an interface to various methods on a given function
+    which can be used to optimize it. 
+    """
     
-    def __init__(self, objective_function, function_gradient = None):
+    """Provide a function, the functions dimension (\in R^n) and
+    optionally its gradient (given as a callable function)
+    """
+    def __init__(self, objective_function, dimension,
+                            function_gradient = None):
+        self.dim = dimension
         self.of = objective_function
         if(function_gradient is not None):
             self.fg = function_gradient
         else:
-            self.fg = FunctionTransforms(objective_function,gradient=True)
-        self.hs = FunctionTransforms(objective_function,hessian=True)
+            self.fg = FunctionTransforms(objective_function, dimension,
+                                            gradient=True)
+        self.hs = FunctionTransforms(objective_function, dimension, 
+                                            hessian=True)
 
 class OptimizationMethod(object):
     """
@@ -79,7 +103,7 @@ class ClassicNewton(OptimizationMethod):
 def main():
     def rosenbrock(x):
         return 100*(x[1]-x[0])**2+(1-x[0])**2
-    opt = OptimizationProblem(rosenbrock)
+    opt = OptimizationProblem(rosenbrock,2)
     cn  = ClassicNewton(opt)
     print cn.optimize()
 
