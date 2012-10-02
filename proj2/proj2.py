@@ -8,7 +8,7 @@ from  scipy       import *
 from  scipy import linalg as lg
 from  matplotlib.pyplot import *
 import sys
-from numpy.linalg import cholesky
+from numpy.linalg import cholesky, inv, norm
 
 class FunctionTransforms(object):
     """ A class which provides a transform of a given function. 
@@ -90,11 +90,11 @@ class OptimizationProblem(object):
         self.dim = dimension
         self.of = objective_function
         if(function_gradient is not None):
-            self.fg = function_gradient
+            self.gradient = function_gradient
         else:
-            self.fg = FunctionTransforms(objective_function, dimension,
+            self.gradient = FunctionTransforms(objective_function, dimension,
                                             gradient=True)
-        self.hs = FunctionTransforms(objective_function, dimension, 
+        self.hessian = FunctionTransforms(objective_function, dimension, 
                                             hessian=True)
 
 class OptimizationMethod(object):
@@ -115,6 +115,21 @@ class ClassicNewton(OptimizationMethod):
         
 
     def optimize(self):
+        x = array([1.,1.0]) #starting guess
+        # x* is a local minimizer if grad(f(x*)) = 0 and 
+        # if its hessian is positive definite
+        while(True):
+            grad = self.op.gradient(x)
+            if(norm(grad) < 1e-3):
+                done = True
+                try:
+                    self.op.hessian(x)
+                except LinAlgError:
+                    done = False
+                if(done):
+                    return x
+            x = x - dot(inv(self.op.hessian(x)), self.op.gradient(x))
+            
         return 'Optimizing with ClassicNewton'
 
  
