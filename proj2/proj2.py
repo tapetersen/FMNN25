@@ -116,7 +116,7 @@ class ClassicNewton(OptimizationMethod):
         
 
     def optimize(self):
-        x = array([1.,1.0]) #starting guess
+        x = array([0.,0.0]) #starting guess
         # x* is a local minimizer if grad(f(x*)) = 0 and 
         # if its hessian is positive definite
         while(True):
@@ -147,8 +147,8 @@ def main():
     def F_grad(x):
         return array([2*x[0]+x[1],x[0]+2*x[1]])
     opt = OptimizationProblem(rosenbrock,2)
-    #cn  = ClassicNewton(opt)
-    #print cn.optimize()
+    cn  = ClassicNewton(opt)
+    print cn.optimize()
 
 
 if __name__ == '__main__':
