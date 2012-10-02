@@ -139,8 +139,15 @@ class ClassicNewton(OptimizationMethod):
 def main():
     def rosenbrock(x):
         return 100*(x[1]-x[0])**2+(1-x[0])**2
+    def rosenbrock_grad(x):
+        return array([-200*(x[1]-x[0]) -2*(1-x[0]),
+                        200*(x[1]-x[0]) ])
+    def F(x):
+        return x[0]**2 + x[0]*x[1] + x[1]**2
+    def F_grad(x):
+        return array([2*x[0]+x[1],x[0]+2*x[1]])
     opt = OptimizationProblem(rosenbrock,2)
-    cn  = ClassicNewton(opt)
+    #cn  = ClassicNewton(opt)
     #print cn.optimize()
 
 
