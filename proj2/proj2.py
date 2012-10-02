@@ -57,10 +57,11 @@ class OptimizationMethod(object):
     """
     Super class for various optimization methods
     """
-     def __init__(self,opt_problem):
-         self.op = opt_problem
+    def __init__(self,opt_problem):
+        self.op = opt_problem
          
-
+    def optimize(self):
+        pass
 
 class ClassicNewton(OptimizationMethod):
     
@@ -69,13 +70,18 @@ class ClassicNewton(OptimizationMethod):
         super(ClassicNewton,self).__init__(opt_problem)
         
 
-
+    def optimize(self):
+        return 'Optimizing with ClassicNewton'
 
  
 
 
 def main():
-	pass
+    def rosenbrock(x):
+        return 100*(x[1]-x[0])**2+(1-x[0])**2
+    opt = OptimizationProblem(rosenbrock)
+    cn  = ClassicNewton(opt)
+    print cn.optimize()
 
 
 if __name__ == '__main__':
