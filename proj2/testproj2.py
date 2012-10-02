@@ -11,6 +11,21 @@ import sys
 from numpy.linalg import cholesky, inv, norm, LinAlgError
 import proj2 as p
 
+def test_hessian():
+    def rosenbrock(x):
+        return 100*(x[1]-x[0])**2+(1-x[0])**2
+    def rosenbrock_hessian(x):
+        return array([ [202, -200] , 
+                        [-200,  200]])
+    opt1 = p.OptimizationProblem(rosenbrock,2)
+    for i in range(-3,3):
+        for j in range(-3,3):
+            k  = opt1.hessian([float(i),float(j)]) - \
+                rosenbrock_hessian([float(i),float(j)])
+            print k, abs(k) <1e-2
+            assert(sum( abs(k) <1e-2 )==4)
+    
+    
 
 def test_gradient():
     def rosenbrock(x):
@@ -30,4 +45,4 @@ def test_gradient():
                 rosenbrock_grad([float(i),float(j)])
             kk = opt2.gradient([float(i),float(j)]) - \
                  F_grad([float(i),float(j)])
-            assert(sum( (k+kk) <1e-5 )==2)
+            assert(sum( abs((k+kk)) <1e-5 )==2)

@@ -60,15 +60,15 @@ class FunctionTransforms(object):
             for j in range(self.dim):
                 step1     = zeros(self.dim)
                 step2     = zeros(self.dim)
-                step1[i]  = h
-                step2[j]  = h
+                step1[j]  = h
+                step2[i]  = h
                 grad1 = (self.gradient(x+step1) - self.gradient(x-step1))/(4.*h)
                 grad2 = (self.gradient(x+step2) - self.gradient(x-step2))/(4.*h)
                 hess[i,j] = grad1[i] + grad2[j]
         # Symmetrizing step. 
         hess = 0.5*hess + 0.5*transpose(hess)
-        L = cholesky(hess) # Raises LinAlgError if (but not only if,
-                           # I guess), if hess isn't positive definite.
+        #L = cholesky(hess) # Raises LinAlgError if (but not only if,
+                           ## I guess), if hess isn't positive definite.
         return hess
 
     def __call__(self, x):
