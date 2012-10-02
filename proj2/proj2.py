@@ -67,8 +67,8 @@ class FunctionTransforms(object):
                 hess[i,j] = grad1[i] + grad2[j]
         # Symmetrizing step. 
         hess = 0.5*hess + 0.5*transpose(hess)
-        #L = cholesky(hess) # Raises LinAlgError if (but not only if,
-                           ## I guess), if hess isn't positive definite.
+        L = cholesky(hess) # Raises LinAlgError if (but not only if,
+                           # I guess), if hess isn't positive definite.
         return hess
 
     def __call__(self, x):
@@ -121,17 +121,10 @@ class ClassicNewton(OptimizationMethod):
         # if its hessian is positive definite
         while(True):
             grad = self.op.gradient(x)
-            if(norm(grad) < 1e-3):
-                done = True
-                try:
-                    self.op.hessian(x)
-                except LinAlgError:
-                    done = False
-                if(done):
-                    return x
+            if(norm(grad) < 1e-8):
+                return x
             x = x - dot(inv(self.op.hessian(x)), self.op.gradient(x))
             
-        return 'Optimizing with ClassicNewton'
 
  
 
