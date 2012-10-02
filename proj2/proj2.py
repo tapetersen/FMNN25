@@ -8,6 +8,7 @@ from  scipy       import *
 from  scipy import linalg as lg
 from  matplotlib.pyplot import *
 import sys
+from numpy.linalg import cholesky
 
 class FunctionTransforms(object):
     """ A class which provides a transform of a given function. 
@@ -37,18 +38,37 @@ class FunctionTransforms(object):
     def gradient(self,x):
         grad = zeros(self.dim)
         h    = 1e-5 
-        for i in range(self.dim)
-            grad[i] = (self.f(x+h*.5) - self.f(x-h*.5))/h
+        for i in range(self.dim):
+            step    = zeros(dim)
+            step[i] = h
+            grad[i] = (self.f(x+step) - self.f(x-step))/(2.*h)
         return grad
 
-    """ Approximates the hessian using (central) finite differences 
-    of degree 1. 
+    """ Approximates the hessian using (central) finite differences.
     A symmtrizing step: hessian = .5*(hessian + hessian^T) is
     also performed
     """
     def hessian(self,x):
-        pass
-
+        hess = zeros((self.dim,self.dim))
+        h    = 1e-5
+        # Approximates hessian using gradient, see 
+        # http://v8doc.sas.com/sashtml/ormp/chap5/sect28.htm
+        # TODO: We don't need to compute this many values since its
+        # symmetric. If we do t more efficiently we don't need
+        # the symmetrizing step (I think). - B
+        for i in range(self.dim):
+            for j in range(self.dim):
+                step1     = zeros(self.dim)
+                step2     = zeros(self.dim)
+                step1[i]  = h
+                step2[j]  = h
+                hess[i,j] = (self.gradient(x+step1) - self.gradient(x-step1))/(4.*h) + \
+                            (self.gradient(x+step2) - self.gradient(x-step2))/(4.*h)
+        # Symmetrizing step. 
+        hess = 0.5*hess + 0.5*transpose(hess)
+        L = cholesky(hess) # Raises LinAlgError if (but not only if,
+                           # I guess), if hess isn't positive definite.
+        return hess
 
     def __call__(self, x):
         if(self.grad):
