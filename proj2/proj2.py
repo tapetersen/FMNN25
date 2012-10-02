@@ -8,7 +8,7 @@ from  scipy       import *
 from  scipy import linalg as lg
 from  matplotlib.pyplot import *
 import sys
-from numpy.linalg import cholesky, inv, norm
+from numpy.linalg import cholesky, inv, norm, LinAlgError
 
 class FunctionTransforms(object):
     """ A class which provides a transform of a given function. 
@@ -39,7 +39,7 @@ class FunctionTransforms(object):
         grad = zeros(self.dim)
         h    = 1e-5 
         for i in range(self.dim):
-            step    = zeros(dim)
+            step    = zeros(self.dim)
             step[i] = h
             grad[i] = (self.f(x+step) - self.f(x-step))/(2.*h)
         return grad
@@ -62,8 +62,9 @@ class FunctionTransforms(object):
                 step2     = zeros(self.dim)
                 step1[i]  = h
                 step2[j]  = h
-                hess[i,j] = (self.gradient(x+step1) - self.gradient(x-step1))/(4.*h) + \
-                            (self.gradient(x+step2) - self.gradient(x-step2))/(4.*h)
+                grad1 = (self.gradient(x+step1) - self.gradient(x-step1))/(4.*h)
+                grad2 = (self.gradient(x+step2) - self.gradient(x-step2))/(4.*h)
+                hess[i,j] = grad1[i] + grad2[j]
         # Symmetrizing step. 
         hess = 0.5*hess + 0.5*transpose(hess)
         L = cholesky(hess) # Raises LinAlgError if (but not only if,
@@ -140,7 +141,7 @@ def main():
         return 100*(x[1]-x[0])**2+(1-x[0])**2
     opt = OptimizationProblem(rosenbrock,2)
     cn  = ClassicNewton(opt)
-    print cn.optimize()
+    #print cn.optimize()
 
 
 if __name__ == '__main__':
