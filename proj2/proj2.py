@@ -43,7 +43,7 @@ class FunctionTransforms(object):
             return self.hessian(x)
         raise Exception("Transform incompletely specified")
 
-class OptimizeFunction(object):
+class OptimizationProblem(object):
     
     def __init__(self, objective_function, function_gradient = None):
         self.of = objective_function
@@ -53,6 +53,25 @@ class OptimizeFunction(object):
             self.fg = FunctionTransforms(objective_function,gradient=True)
         self.hs = FunctionTransforms(objective_function,hessian=True)
 
+class OptimizationMethod(object):
+    """
+    Super class for various optimization methods
+    """
+     def __init__(self,opt_problem):
+         self.op = opt_problem
+         
+
+
+class ClassicNewton(OptimizationMethod):
+    
+    
+    def __init__(self,opt_problem):
+        super(ClassicNewton,self).__init__(opt_problem)
+        
+
+
+
+ 
 
 
 def main():
