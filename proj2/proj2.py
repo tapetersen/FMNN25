@@ -126,13 +126,15 @@ class ClassicNewton(OptimizationMethod):
         # if its hessian is positive definite
         while(True):
             grad = self.op.gradient(x)
-            if(norm(grad) < 1e-8):
+            print norm(grad);
+            if(norm(grad) < 1e-5):
                 return x
             #x = x - dot(inv(self.op.hessian(x)), self.op.gradient(x))
 
             # use cholesky decomposition as requested in task 3
             # will throw LinAlgError if decomposition fails
-            # seems to work at least
+            # This is not a problem as if that's the case the point 
+            # we're converging to is a saddle point and not a minimum
             factored = lg.cho_factor(self.op.hessian(x))
             x = x - lg.cho_solve(factored, self.op.gradient(x))
 
@@ -152,7 +154,7 @@ class NewtonExactLine(OptimizationMethod):
         # if its hessian is positive definite
         while(True):
             grad = self.op.gradient(x)
-            if(norm(grad) < 1e-8):
+            if(norm(grad) < 1e-5):
                 return x
             factored = lg.cho_factor(self.op.hessian(x))
             direction = lg.cho_solve(factored, self.op.gradient(x))
@@ -163,7 +165,7 @@ class NewtonExactLine(OptimizationMethod):
                                  #bounds=(0, 10))
             alpha = opt.fminbound(
                 lambda alpha: self.op.of(x - alpha*direction),
-                0, 10)
+                0, 1000)
             x = x - alpha*direction
 
             
@@ -178,11 +180,12 @@ def main():
         return x[0]**2 + x[0]*x[1] + x[1]**2
     def F_grad(x):
         return array([2*x[0]+x[1],x[0]+2*x[1]])
+
     opt = OptimizationProblem(rosenbrock, 2)
     cn  = ClassicNewton(opt)
-    print cn.optimize([-3, 7])
+    print cn.optimize([-3, -3])
     cn  = NewtonExactLine(opt)
-    print cn.optimize([-3, 7])
+    print cn.optimize([-3, -3])
 
 
 if __name__ == '__main__':
