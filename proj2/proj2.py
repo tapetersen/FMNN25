@@ -168,7 +168,8 @@ class ClassicNewton(OptimizationMethod):
                 factored = lg.cho_factor(self.op.hessian(x))
                 x = x - lg.cho_solve(factored, self.op.gradient(x))
             except LinalgError:
-                raise Exception('Indefinite hessian - no minimum found due to saddle point.');
+                raise LinAlgError(
+                    "Hessian not positive definite, converging to saddle point")
 
 class NewtonExactLine(OptimizationMethod):
     
@@ -188,8 +189,13 @@ class NewtonExactLine(OptimizationMethod):
             grad = self.op.gradient(x)
             if(norm(grad) < 1e-5):
                 return x
-            factored = lg.cho_factor(self.op.hessian(x))
-            direction = lg.cho_solve(factored, self.op.gradient(x))
+            try:
+                factored = lg.cho_factor(self.op.hessian(x))
+                direction = lg.cho_solve(factored, self.op.gradient(x))
+            except LinAlgError:
+                raise LinAlgError(
+                    "Hessian not positive definite, converging to saddle point")
+            
 
             # find step size alpha
             # requires scipy > 0.11 and I have 0.10 // Tobias
