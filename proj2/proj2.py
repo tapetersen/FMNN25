@@ -194,7 +194,7 @@ class NewtonExactLine(OptimizationMethod):
                 direction = lg.cho_solve(factored, self.opt_problem.gradient(x))
             except LinAlgError:
                 raise LinAlgError(
-                    "Hessian not positive definite, converging to saddle point")
+                    "Hessian indefinite, converging to saddle point")
             
 
             # find step size alpha
@@ -224,14 +224,16 @@ class NewtonInexactLine(OptimizationMethod):
             grad = self.opt_problem.gradient(x)
 
             #Will only be reached if the user by freak-accident guesses correctly
-            if(norm(grad) < 1e-5):
-                return x
+##            if(norm(grad) < 1e-5):
+##                print('FREAK!!!')
+##                return x
 
             try:
                 factored = lg.cho_factor(self.opt_problem.hessian(x))
                 direction = lg.cho_solve(factored, self.opt_problem.gradient(x))
-            except LinalgError:
-                raise Exception('Indefinite hessian - no minimum found due to saddle point.');
+            except LinAlgError:
+                raise LinAlgError(
+                    "Hessian indefinite, converging to saddle point")
 
 
             # find step size alpha
@@ -242,7 +244,8 @@ class NewtonInexactLine(OptimizationMethod):
                 lambda alpha: self.opt_problem.objective_function(x - alpha*direction),
                 0, 1000)
             x = x - alpha*direction
-
+            print x
+            print alpha
             #epsilon can take an arbitrary value between 0 and 1,
             #as long as it is fixed.
             epsilon = 0.5
@@ -280,6 +283,7 @@ class NewtonInexactLine(OptimizationMethod):
                     #we check if we've come sufficiently near by the wolf-goldstein condition:
                     #grad(alpha) >= (1-epsilon)*grad(0)
                     if(grad_alpha >= (1-epsilon)*grad_origin):
+                        print('GOLDSTEIN!!!')
                         return x
                         #Do not replace 1-epsilon with 0.5, readabillity above effectiveness
                         #for now.
