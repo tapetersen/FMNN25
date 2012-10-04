@@ -109,7 +109,7 @@ class OptimizationProblem(object):
                             function_gradient = None):
         
         self.dim = dimension
-        self.of = objective_function
+        self.objective_function = objective_function
         self.is_function_gradient = False;
         """
             A gradient is specfied by the user, use it.
@@ -134,7 +134,7 @@ class OptimizationMethod(object):
     Please note - opt_problem inherits from the class Optimization problem
     """
     def __init__(self, opt_problem):
-        self.op = opt_problem
+        self.opt_problem = opt_problem
          
     def optimize(self):
         pass
@@ -154,19 +154,19 @@ class ClassicNewton(OptimizationMethod):
         # x* is a local minimizer if grad(f(x*)) = 0 and 
         # if its hessian is positive definite
         while(True):
-            grad = self.op.gradient(x)
+            grad = self.opt_problem.gradient(x)
             print norm(grad);
             if(norm(grad) < 1e-5):
                 return x
-            #x = x - dot(inv(self.op.hessian(x)), self.op.gradient(x))
+            #x = x - dot(inv(self.opt_problem.hessian(x)), self.opt_problem.gradient(x))
 
             # use cholesky decomposition as requested in task 3
             # will throw LinAlgError if decomposition fails
             # This is not a problem as if that's the case the point 
             # we're converging to is a saddle point and not a minimum
             try:
-                factored = lg.cho_factor(self.op.hessian(x))
-                x = x - lg.cho_solve(factored, self.op.gradient(x))
+                factored = lg.cho_factor(self.opt_problem.hessian(x))
+                x = x - lg.cho_solve(factored, self.opt_problem.gradient(x))
             except LinalgError:
                 raise LinAlgError(
                     "Hessian not positive definite, converging to saddle point")
@@ -186,12 +186,12 @@ class NewtonExactLine(OptimizationMethod):
         # x* is a local minimizer if grad(f(x*)) = 0 and 
         # if its hessian is positive definite
         while(True):
-            grad = self.op.gradient(x)
+            grad = self.opt_problem.gradient(x)
             if(norm(grad) < 1e-5):
                 return x
             try:
-                factored = lg.cho_factor(self.op.hessian(x))
-                direction = lg.cho_solve(factored, self.op.gradient(x))
+                factored = lg.cho_factor(self.opt_problem.hessian(x))
+                direction = lg.cho_solve(factored, self.opt_problem.gradient(x))
             except LinAlgError:
                 raise LinAlgError(
                     "Hessian not positive definite, converging to saddle point")
@@ -199,15 +199,101 @@ class NewtonExactLine(OptimizationMethod):
 
             # find step size alpha
             # requires scipy > 0.11 and I have 0.10 // Tobias
-            #result = opt.minimize_scalar(lambda alpha: self.op.of(x-alpha*direction),
+            #result = opt.minimize_scalar(lambda alpha: self.opt_problem.objective_function(x-alpha*direction),
                                  #bounds=(0, 10))
             alpha = opt.fminbound(
-                lambda alpha: self.op.of(x - alpha*direction),
+                lambda alpha: self.opt_problem.objective_function(x - alpha*direction),
                 0, 1000)
             x = x - alpha*direction
 
-            
 
+class NewtonInexactLine(OptimizationMethod):    
+    
+    def __init__(self, opt_problem):
+        super(NewtonInexactLine, self).__init__(opt_problem)
+        
+
+    def optimize(self, guess=None):
+        if guess is not None:
+            x = guess
+        else:
+            x = array([0., 0.]) #starting guess
+        # x* is a local minimizer if grad(f(x*)) = 0 and 
+        # if its hessian is positive definite
+        while(True):
+            grad = self.opt_problem.gradient(x)
+
+            #Will only be reached if the user by freak-accident guesses correctly
+            if(norm(grad) < 1e-5):
+                return x
+
+            try:
+                factored = lg.cho_factor(self.opt_problem.hessian(x))
+                direction = lg.cho_solve(factored, self.opt_problem.gradient(x))
+            except LinalgError:
+                raise Exception('Indefinite hessian - no minimum found due to saddle point.');
+
+
+            # find step size alpha
+            # requires scipy > 0.11 and I have 0.10 // Tobias
+            #result = opt.minimize_scalar(lambda alpha: self.opt_problem.objective_function(x-alpha*direction),
+                                 #bounds=(0, 10))
+            alpha = opt.fminbound(
+                lambda alpha: self.opt_problem.objective_function(x - alpha*direction),
+                0, 1000)
+            x = x - alpha*direction
+
+            #epsilon can take an arbitrary value between 0 and 1,
+            #as long as it is fixed.
+            epsilon = 0.5
+
+            #Some prework to be used to check for wolfe-conditions
+            grad_x = norm( self.opt_problem.gradient(x) )
+            grad_step = norm( self.opt_problem.gradient(x - alpha*direction) )
+            
+            f_x = self.opt_problem.objective_function(x)
+            f_step = self.opt_problem.objective_function(x - alpha*direction)
+            #for newton-quasi methods the constants in the conditions are:
+            c1 = 1e-4
+            c2=0.9
+
+            ### THE WOLF CONDITIONS ###
+
+            #i) Armijo rule, first condition in the wolfe conditions
+            #   makes sure that the step length alpha is reduced sufficiently 
+            if(f_step <= f_x + c1*alpha*norm( direction )*grad_x):
+
+                #ii) Curvature condition to satisfy sufficient slope-reduction,
+                #    using the modified strong condition on curvature
+                if(norm(direction*grad_step) <= c2*norm(direction*grad_x)):
+
+                    #Everything passed, we're in the right direction
+                    #next we make sure the wolfe-goldstein condition is passed,
+                    #then we are done!
+
+                    #Precalculated functionvalues used later to check for stop-criteria
+                    grad_alpha = norm(self.opt_problem.gradient(alpha))
+                    grad_origin = norm(self.opt_problem.gradient(0))
+                    f_alpha = norm(self.opt_problem.objective_function(alpha))
+                    f_origin = norm(self.opt_problem.objective_function(0))
+
+                    #we check if we've come sufficiently near by the wolf-goldstein condition:
+                    #grad(alpha) >= (1-epsilon)*grad(0)
+                    if(grad_alpha >= (1-epsilon)*grad_origin):
+                        return x
+                        #Do not replace 1-epsilon with 0.5, readabillity above effectiveness
+                        #for now.
+                    else:
+                        continue
+                else:
+                    #else added for readabillity mostly can be removed
+                    Exception('Condition (ii) not satisfied in the wolfe-conditions: insufficient decrease in slope')
+            else:
+                #else added for readabillity mostly can be removed
+                Exception('Condition (i) not satisfied in the wolfe-conditions: insufficient reduction in step-size alpha');
+                          
+                        
+            
 def main():
     def rosenbrock(x):
         return 100*(x[1]-x[0])**2+(1-x[0])**2
@@ -221,9 +307,14 @@ def main():
 
     opt = OptimizationProblem(rosenbrock, 2)
     cn  = ClassicNewton(opt)
+    print "\nClassicNewton.Optimize(...): \n"
     print cn.optimize([-3, -3])
     cn  = NewtonExactLine(opt)
+    print "\nNewtonExactLine.Optimize(...): \n"
     print cn.optimize([-3, -3])
+    cn = NewtonInexactLine(opt);
+    print "\nNewtonInexactLine.Optimize(...): \n"
+    print cn.optimize([100, 100])
 
 
 if __name__ == '__main__':
