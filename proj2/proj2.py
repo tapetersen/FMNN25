@@ -23,11 +23,21 @@ class FunctionTransforms(object):
     The transforms are constructed by finite differences. 
     """
     
-    
+    """
+    Th constructor receives information abut what kind of transform is needed
+    for the moment - only one transform can be specified.
+
+    Exceptions:
+        - If no transforms are specified the class asks the user for one
+        - If two transforms are specfied the class asks for only one to be specified,
+        the transform can only be uniquely specified.
+    """
     def __init__(self, function, dimension,
                  gradient = False, hessian = False):
         if( not (gradient or hessian)):
             raise Exception("you must specify a transform")
+        elif(gradient and hessian):
+            raise Exception("You can only specify one transform");
         self.grad = gradient
         self.hess = hessian
         self.f    = function
@@ -45,7 +55,7 @@ class FunctionTransforms(object):
             grad[i] = (self.f(x+step) - self.f(x-step))/(2.*h)
         return grad
 
-    """ Approximates the hessian using (central) finite differences.
+    """ Approximates the hessian using (central) finite differences of degree 2
     A symmtrizing step: hessian = .5*(hessian + hessian^T) is
     also performed
     """
@@ -71,28 +81,44 @@ class FunctionTransforms(object):
         #L = cholesky(hess) # Raises LinAlgError if (but not only if,
                            ## I guess), if hess isn't positive definite.
         return hess
-
+    """
+    Evaluation function that performs the transfrm specfied,
+    the constructuor ensures that the transform is uniquely determind at instaciation.
+    """
     def __call__(self, x):
         if(self.grad):
             return self.gradient(x)
         if(self.hess):
             return self.hessian(x)
-        raise Exception("Transform incompletely specified")
+        #raise Exception("Transform incompletely specified")
+        #This eception is never reached since always one trasform is guaranteed to be specified through the constructor 
 
 class OptimizationProblem(object):
     """ Provides an interface to various methods on a given function
     which can be used to optimize it. 
     """
     
-    """Provide a function, the functions dimension (\in R^n) and
+    """The user provides a function, the functions dimension (\in R^n) and
     optionally its gradient (given as a callable function)
+
+    An atribute 'is_function_gradient' is added ss a boolean so that we can keep track
+    if we're working with a matrix or a function
     """
     def __init__(self, objective_function, dimension,
                             function_gradient = None):
+        
         self.dim = dimension
         self.of = objective_function
+        self.is_function_gradient = False;
+        """
+            A gradient is specfied by the user, use it.
+            Otherwise - obtain the gradient numerically
+
+            Always construct the Hessian numerically
+        """
         if(function_gradient is not None):
             self.gradient = function_gradient
+            self.is_function_gradient = True;
         else:
             self.gradient = FunctionTransforms(objective_function, dimension,
                                             gradient=True)
@@ -103,6 +129,8 @@ class OptimizationProblem(object):
 class OptimizationMethod(object):
     """
     Super class for various optimization methods
+
+    Please note - opt_problem inherits from the class Optimization problem
     """
     def __init__(self, opt_problem):
         self.op = opt_problem
@@ -135,8 +163,11 @@ class ClassicNewton(OptimizationMethod):
             # will throw LinAlgError if decomposition fails
             # This is not a problem as if that's the case the point 
             # we're converging to is a saddle point and not a minimum
-            factored = lg.cho_factor(self.op.hessian(x))
-            x = x - lg.cho_solve(factored, self.op.gradient(x))
+            try:
+                factored = lg.cho_factor(self.op.hessian(x))
+                x = x - lg.cho_solve(factored, self.op.gradient(x))
+            except LinalgError:
+                raise Exception('Indefinite hessian - no minimum found due to saddle point.');
 
 class NewtonExactLine(OptimizationMethod):
     
