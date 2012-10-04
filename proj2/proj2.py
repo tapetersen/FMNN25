@@ -103,6 +103,7 @@ class OptimizationProblem(object):
 
     An atribute 'is_function_gradient' is added ss a boolean so that we can keep track
     if we're working with a matrix or a function
+    
     """
     def __init__(self, objective_function, dimension,
                             function_gradient = None):
