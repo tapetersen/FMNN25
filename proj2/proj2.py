@@ -156,12 +156,14 @@ class ClassicNewton(OptimizationMethod):
         super(ClassicNewton, self).__init__(opt_problem)
         
 
-    def optimize(self, guess=None):
+    def optimize(self, guess=None, debug=False):
         if guess is not None:
             x = guess
         else:
             x = array([0., 0.]) #starting guess
 
+        if debug:
+            self.xs = []
         # x* is a local minimizer if grad(f(x*)) = 0 and 
         # if its hessian is positive definite
         
@@ -171,10 +173,14 @@ class ClassicNewton(OptimizationMethod):
         f_x      = self.opt_problem.objective_function(x)
         G = self.opt_problem.hessian(x)
         H = inv(G)
-        while True:
+        for ii in xrange(50):
+            if debug:
+                self.xs.append(x)
+
+            print "x: %f y: %f" % (x[0], x[1])
 
             if norm(f_grad_x) < 1e-4 :
-                return x
+                break
         
             direction = self.find_direction(f_grad_x, H, G)
             alpha = self.find_step_size(
@@ -185,6 +191,12 @@ class ClassicNewton(OptimizationMethod):
             H, G = self.update_hessian(x, delta, H, G) 
             x = x + delta
             f_grad_x = f_grad(x)
+
+        if debug:
+            self.xs = array(self.xs)
+            self.plot()
+
+        return x
 
     def find_step_size(self, f, f_grad):
         return 1
@@ -198,8 +210,30 @@ class ClassicNewton(OptimizationMethod):
                 "Hessian not positive definite, converging to saddle point")
 
     def update_hessian(self, x, delta, H, G):
-        return None, self.opt_problem.hessian(x+delta)
+        return None, self.opt_problem.hessian(x + delta)
 
+    def plot(self):
+        # find min/max of points
+        xmin, ymin = amin(self.xs, axis=0)
+        xmax, ymax = amax(self.xs, axis=0)
+        deltax = xmax-xmin
+        deltay = ymax-ymin
+        xmin = xmin-.05*deltax
+        ymin = ymin-.05*deltay
+        xmax = xmax+.05*deltax
+        ymax = ymax+.05*deltay
+        x = linspace(xmin, xmax, 100)
+        y = linspace(ymin, ymax, 100)
+        X, Y = meshgrid(x, y)
+        Z = self.opt_problem.objective_function([X, Y])
+        pcolor(X, Y, Z)
+        colorbar()
+        axis([xmin, xmax, ymin, ymax])
+
+        plot(self.xs[:,0], self.xs[:,1], '+-', color='black')
+        show()
+
+        
 class NewtonExactLine(ClassicNewton):
     
     
@@ -337,12 +371,14 @@ class QuasiNewtonBroyden(NewtonInexactLine):
         super(QuasiNewtonBroyden, self).__init__(*args, **kwargs)
         
     def update_hessian(self, x, delta, H, G):
-        #print str(norm(inv(self.opt_problem.hessian(x))-H), 'fro')
+        #print str(norm(inv(self.opt_problem.hessian(x))-H, 'fro'))
+        #print x
         f_grad = self.opt_problem.gradient
         gamma = f_grad(x+delta) - f_grad(x)
         u = delta - dot(H, gamma)
         a = 1/dot(u, gamma)
-        H = H + a*outer(u, u)
+        H = H + dot(outer(delta - dot(H, gamma), delta), H) / \
+                dot(delta, dot(H, gamma))
         return H, None
 
     def find_direction(self, f_grad_x, H, G):
@@ -372,7 +408,7 @@ def main():
     def F_grad(x):
         return array([2*x[0]+x[1],x[0]+2*x[1]])
 
-    guess = [1.5, 1.5]
+    guess = [-1, 1]
 
     opt = OptimizationProblem(rosenbrock, 2)
     cn  = ClassicNewton(opt)
@@ -386,7 +422,7 @@ def main():
     print cn.optimize(guess)
     cn = QuasiNewtonBroyden(opt);
     print "\nQuasiNewtonBroyden.Optimize(...): \n"
-    print cn.optimize(guess)
+    print cn.optimize(guess, True)
     cn = QuasiNewtonBroydenBad(opt);
     print "\nQuasiNewtonBroydenBad.Optimize(...): \n"
     print cn.optimize(guess)
