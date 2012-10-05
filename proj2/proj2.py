@@ -4,11 +4,14 @@
 #  
 
 from  __future__  import division
-from  scipy       import *
-from  scipy import linalg as lg
-import scipy.optimize as opt
-from  matplotlib.pyplot import *
+
+import ipdb
 import sys
+import scipy.optimize as opt
+import scipy.linalg as lg
+
+from  scipy       import *
+from  matplotlib.pyplot import *
 from numpy.linalg import cholesky, inv, norm, LinAlgError
 
 class FunctionTransforms(object):
@@ -125,6 +128,11 @@ class OptimizationProblem(object):
                                             gradient=True)
         self.hessian = FunctionTransforms(objective_function, dimension, 
                                             hessian=True)
+    def __call__(self, x):
+        """
+        Pass through for the objective function
+        """
+        return self.objective_function(x)
 
 
 class OptimizationMethod(object):
@@ -197,7 +205,7 @@ class NewtonExactLine(OptimizationMethod):
                     "Hessian indefinite, converging to saddle point")
             
 
-            # find step size alpha
+            # find step size alpha by exact line search
             # requires scipy > 0.11 and I have 0.10 // Tobias
             #result = opt.minimize_scalar(lambda alpha: self.opt_problem.objective_function(x-alpha*direction),
                                  #bounds=(0, 10))
@@ -206,6 +214,133 @@ class NewtonExactLine(OptimizationMethod):
                 0, 1000)
             x = x - alpha*direction
 
+class NewtonInexactLine2(OptimizationMethod):    
+    """
+    Newton method with inexact line search as given in Fletcher
+    """
+    
+    def __init__(self, opt_problem, minimum_bound=0.0, rho=1e-4, sigma=.9):
+        super(NewtonInexactLine2, self).__init__(opt_problem)
+        self.minimum_bound = minimum_bound
+        self.rho = rho
+        self.sigma = sigma
+        self.tau1 = 9.
+        self.tau2 = .1
+        self.tau3 = .5
+        
+    def optimize(self, guess=None):
+        if guess is not None:
+            x = guess
+        else:
+            x = array([0., 0.]) #starting guess
+        # x* is a local minimizer if grad(f(x*)) = 0 and 
+        # if its hessian is positive definite
+
+        f_grad_x = self.opt_problem.gradient(x)
+        grad_norm = norm(f_grad_x)
+        while grad_norm > 1e-5:
+
+            # computes direction for step
+            try:
+                factored = lg.cho_factor(self.opt_problem.hessian(x))
+                # observe the minus since we're actually going in opposite
+                # direction when we update x
+                direction = lg.cho_solve(factored, self.opt_problem.gradient(x))
+            except LinAlgError:
+                raise LinAlgError(
+                    "Hessian indefinite, converging to saddle point")
+
+            alpha = self.find_step_size(x, -direction)
+            x = x - alpha*direction
+            f_grad_x = self.opt_problem.gradient(x)
+            grad_norm = norm(f_grad_x)
+
+        return x
+
+    def find_step_size(self, x, direction):
+
+        f = self.opt_problem.objective_function
+        f_grad = self.opt_problem.gradient
+        f_x = f(x)
+        f_grad_x = f_grad(x)
+        grad_norm = norm(f_grad_x)
+
+        # Calculate maximum alpha where we would always reject it
+        # due to the Armijo rule (condition i)
+        mu = (self.minimum_bound - f_x)/(self.rho*dot(f_grad_x, direction))
+
+        # bracketing face, first algorithm part in book
+
+        # doesn't say how to choose this
+        alpha = .5*mu
+        alpha_prev = 0.
+
+        f_alpha = f_x
+        # Begin the bracketing phase
+        while True:
+            f_prev_alpha = f_alpha
+            f_alpha = f(x + alpha*direction)
+
+            if f_alpha < self.minimum_bound:
+                return alpha
+
+            # check condition 1 or if new f value is higher
+            if (f_alpha > f_x + alpha*self.rho*dot(f_grad_x, direction) or
+                    f_alpha >= f_prev_alpha):
+                a = alpha_prev
+                b = alpha
+                f_a = f_prev_alpha
+                break
+
+            f_grad_alpha = f_grad(x + alpha*direction)
+
+            # check condition 2
+            if norm(f_grad_alpha) <= -self.sigma*dot(f_grad_x, direction):
+                return alpha
+
+            if dot(f_grad_alpha, direction) >= 0:
+                a = alpha
+                b = alpha_prev
+                f_a = f_alpha
+                break
+
+            if mu < 2*alpha - alpha_prev:
+                alpha_prev = alpha
+                alpha = mu
+            else:
+                # TODO:
+                # find alpha as in book, right now I use middle point
+                _alpha = alpha
+                alpha = 0.5*(2*alpha - alpha_prev +
+                         min(mu, alpha+self.tau1*(alpha-alpha_prev)))
+                alpha_prev = _alpha
+
+        while True:
+            # TODO:
+            # Should do polynomial interpolation here as well
+            alpha = 0.5*((a + self.tau2*(b - a)) + (b - self.tau3*(b - a)))
+            f_alpha = f(x + alpha*direction)
+
+            # check if alpha satisfies condition 1. If not we need a smaller
+            # value choose [a, alpha]
+            if (f_alpha > f_x + self.rho*alpha*dot(f_grad_x, direction) or
+                    f_alpha >= f_a):
+                #a = a
+                b = alpha
+            else:
+                f_grad_alpha = f_grad(x + alpha*direction)
+                # alpha satisfies condition 1 check condition 2 and if true
+                # return that alpha, otherwise we're too close,
+                #choose [alpha, b]
+                if norm(f_grad_alpha) <= -self.sigma*dot(f_grad_x, direction):
+                    return alpha
+
+                # changing order with respect to the bok to avoid saving a
+                if (b - a)*dot(f_grad_alpha, direction) >= 0:
+                    b = a
+                a = alpha
+                # else:
+                    #b = b
 
 class NewtonInexactLine(OptimizationMethod):    
     
@@ -237,15 +372,15 @@ class NewtonInexactLine(OptimizationMethod):
 
 
             # find step size alpha
-            # requires scipy > 0.11 and I have 0.10 // Tobias
-            #result = opt.minimize_scalar(lambda alpha: self.opt_problem.objective_function(x-alpha*direction),
-                                 #bounds=(0, 10))
+
+            # the following does EXACT line search finding optimal point
             alpha = opt.fminbound(
                 lambda alpha: self.opt_problem.objective_function(x - alpha*direction),
                 0, 1000)
             x = x - alpha*direction
             print x
             print alpha
+
             #epsilon can take an arbitrary value between 0 and 1,
             #as long as it is fixed.
             epsilon = 0.5
@@ -254,11 +389,16 @@ class NewtonInexactLine(OptimizationMethod):
             grad_x = norm( self.opt_problem.gradient(x) )
             grad_step = norm( self.opt_problem.gradient(x - alpha*direction) )
             
-            f_x = self.opt_problem.objective_function(x)
-            f_step = self.opt_problem.objective_function(x - alpha*direction)
             #for newton-quasi methods the constants in the conditions are:
             c1 = 1e-4
             c2=0.9
+
+            # objective function value here
+            f_x = self.opt_problem.objective_function(x)
+
+            # new objective function value with current alpha
+            f_step = self.opt_problem.objective_function(x - alpha*direction)
+
 
             ### THE WOLF CONDITIONS ###
 
@@ -274,7 +414,17 @@ class NewtonInexactLine(OptimizationMethod):
                     #next we make sure the wolfe-goldstein condition is passed,
                     #then we are done!
 
+
+                    # From what I can gather from the litterature
+                    # when f(alpha) or f(0) is referred to it means 
+                    # f(x - alpha*direction) and f(x - 0*direction) respectively
+                    # we're trying to minimize a function with vector arguments
+                    # objective_funciton(alpha) and objective_funciton(0)
+                    # doesn't make sense
+                    # //Tobias
+
                     #Precalculated functionvalues used later to check for stop-criteria
+
                     grad_alpha = norm(self.opt_problem.gradient(alpha))
                     grad_origin = norm(self.opt_problem.gradient(0))
                     f_alpha = norm(self.opt_problem.objective_function(alpha))
@@ -316,9 +466,9 @@ def main():
     cn  = NewtonExactLine(opt)
     print "\nNewtonExactLine.Optimize(...): \n"
     print cn.optimize([-3, -3])
-    cn = NewtonInexactLine(opt);
+    cn = NewtonInexactLine2(opt);
     print "\nNewtonInexactLine.Optimize(...): \n"
-    print cn.optimize([100, 100])
+    print cn.optimize([-3, -3])
 
 
 if __name__ == '__main__':
