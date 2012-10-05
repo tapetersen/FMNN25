@@ -207,7 +207,7 @@ class NewtonExactLine(ClassicNewton):
         super(NewtonExactLine, self).__init__(opt_problem)
         
     def find_step_size(self, f, f_grad):
-        return opt.fminbound(f,  0, 1000)
+        return opt.fminbound(f, 0, 1000)
 
 
 class NewtonInexactLine(ClassicNewton):    
@@ -225,7 +225,6 @@ class NewtonInexactLine(ClassicNewton):
         self.tau2 = .1
         self.tau3 = .5
         
-
 
     def find_step_size(self, f, f_grad):
 
@@ -362,7 +361,7 @@ class QuasiNewtonBroydenBad(QuasiNewtonBroyden):
             
 def main():
     def rosenbrock(x):
-        return 100*(x[1]-x[0])**2+(1-x[0])**2
+        return 100*(x[1]-x[0]**2)**2+(1-x[0])**2
     def rosenbrock_grad(x):
         return array([-200*(x[1]-x[0]) -2*(1-x[0]),
                         200*(x[1]-x[0]) ])
