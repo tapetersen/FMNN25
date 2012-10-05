@@ -215,6 +215,7 @@ class NewtonExactLine(OptimizationMethod):
                 0, 1000)
             x = x - alpha*direction
 
+
 class NewtonInexactLine2(OptimizationMethod):    
     """
     Newton method with inexact line search as given in Fletcher
@@ -324,7 +325,7 @@ class NewtonInexactLine2(OptimizationMethod):
             if norm(f_grad_alpha) <= -self.sigma*f_grad_0:
                 return alpha
 
-            if dot(f_grad_alpha, direction) >= 0:
+            if f_grad_alpha >= 0:
                 a = alpha
                 b = alpha_prev
                 f_a = f_alpha
@@ -367,6 +368,87 @@ class NewtonInexactLine2(OptimizationMethod):
                 a = alpha
                 # else:
                     #b = b
+
+class QuasiNewtonBroyden(NewtonInexactLine2):    
+    
+    def __init__(self, *args, **kwargs):
+        super(QuasiNewtonBroyden, self).__init__(*args, **kwargs)
+        
+    def optimize(self, guess=None):
+        if guess is not None:
+            x = guess
+        else:
+            x = array([0., 0.]) #starting guess
+        # x* is a local minimizer if grad(f(x*)) = 0 and 
+        # if its hessian is positive definite
+
+        f = self.opt_problem.objective_function
+        f_grad = self.opt_problem.gradient
+        f_grad_x = f_grad(x)
+        grad_norm = norm(f_grad_x)
+        H = inv(self.opt_problem.hessian(x))
+        while grad_norm > 1e-5:
+            print H
+
+            direction = dot(H, f_grad_x)
+
+            alpha = self.find_step_size(
+                lambda alpha: f(x - alpha*direction),
+                lambda alpha: dot(f_grad(x - alpha*direction), -direction)
+            )
+
+            delta = -alpha*direction
+            x = x + delta
+            f_grad_x_prev = f_grad_x
+            f_grad_x = self.opt_problem.gradient(x)
+            gamma = f_grad_x - f_grad_x_prev
+
+            H = H + outer( (delta - dot(H, gamma)) / 
+                     (dot(delta, dot(H, gamma))), dot(delta, H) )
+
+            print norm(H - inv(self.opt_problem.hessian(x)))
+
+            grad_norm = norm(f_grad_x)
+        return x
+
+class QuasiNewtonBroydenBad(NewtonInexactLine2):    
+    
+    def __init__(self, *args, **kwargs):
+        super(QuasiNewtonBroydenBad, self).__init__(*args, **kwargs)
+        
+    def optimize(self, guess=None):
+        if guess is not None:
+            x = guess
+        else:
+            x = array([0., 0.]) #starting guess
+        # x* is a local minimizer if grad(f(x*)) = 0 and 
+        # if its hessian is positive definite
+
+        f = self.opt_problem.objective_function
+        f_grad = self.opt_problem.gradient
+        f_grad_x = f_grad(x)
+        grad_norm = norm(f_grad_x)
+        H = self.opt_problem.hessian(x)
+        while grad_norm > 1e-5:
+
+            direction = dot(H, f_grad_x)
+
+            alpha = self.find_step_size(
+                lambda alpha: f(x - alpha*direction),
+                lambda alpha: dot(f_grad(x - alpha*direction), -direction))
+
+            delta = -alpha*direction
+            x = x + delta
+            f_grad_x_prev = f_grad_x
+            f_grad_x = self.opt_problem.gradient(x)
+            gamma = f_grad_x - f_grad_x_prev
+
+            H = H + outer(
+                (delta - dot(H, gamma)) / dot(gamma, gamma),
+                gamma )
+
+            grad_norm = norm(f_grad_x)
+        return x
 
 class NewtonInexactLine(OptimizationMethod):    
     
@@ -493,7 +575,13 @@ def main():
     print "\nNewtonExactLine.Optimize(...): \n"
     print cn.optimize([-3, -3])
     cn = NewtonInexactLine2(opt);
-    print "\nNewtonInexactLine.Optimize(...): \n"
+    print "\nNewtonInexact2.Optimize(...): \n"
+    print cn.optimize([-10., -20.])
+    cn = QuasiNewtonBroyden(opt);
+    print "\nQuasiNewtonBroyden.Optimize(...): \n"
+    print cn.optimize([-10., -20.])
+    cn = QuasiNewtonBroydenBad(opt);
+    print "\nQuasiNewtonBroydenBad.Optimize(...): \n"
     print cn.optimize([-10., -20.])
 
 
