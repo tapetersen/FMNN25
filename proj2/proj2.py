@@ -10,9 +10,10 @@ import sys
 import scipy.optimize as opt
 import scipy.linalg as lg
 
-from  scipy       import *
-from  matplotlib.pyplot import *
+from scipy       import *
+from matplotlib.pyplot import *
 from numpy.linalg import cholesky, inv, norm, LinAlgError
+from numpy import polynomial as P
 
 class FunctionTransforms(object):
     """ A class which provides a transform of a given function. 
@@ -236,66 +237,91 @@ class NewtonInexactLine2(OptimizationMethod):
         # x* is a local minimizer if grad(f(x*)) = 0 and 
         # if its hessian is positive definite
 
-        f_grad_x = self.opt_problem.gradient(x)
+        f = self.opt_problem.objective_function
+        f_grad = self.opt_problem.gradient
+        f_grad_x = f_grad(x)
         grad_norm = norm(f_grad_x)
         while grad_norm > 1e-5:
 
             # computes direction for step
             try:
                 factored = lg.cho_factor(self.opt_problem.hessian(x))
-                # observe the minus since we're actually going in opposite
-                # direction when we update x
-                direction = lg.cho_solve(factored, self.opt_problem.gradient(x))
+                direction = lg.cho_solve(factored, f_grad(x))
             except LinAlgError:
                 raise LinAlgError(
                     "Hessian indefinite, converging to saddle point")
 
-            alpha = self.find_step_size(x, -direction)
+            alpha = self.find_step_size(
+                lambda alpha: f(x - alpha*direction),
+                lambda alpha: dot(f_grad(x - alpha*direction), -direction)
+            )
+
             x = x - alpha*direction
             f_grad_x = self.opt_problem.gradient(x)
             grad_norm = norm(f_grad_x)
 
         return x
 
-    def find_step_size(self, x, direction):
+    def cubic_minimize(fa, fpa, fb, fbp, a, b):
+        """
+        Fits a cubic polynomial to the points and derivatives and returns it's
+        minimum in the interval
+        """
 
-        f = self.opt_problem.objective_function
-        f_grad = self.opt_problem.gradient
-        f_x = f(x)
-        f_grad_x = f_grad(x)
-        grad_norm = norm(f_grad_x)
+        # Transform to [0, 1] (derivatives change)
+        fpa = fpa*(b-a)
+        fpb = fpb*(b-a)
+
+        # The interpolating polynomial is given by:
+        # fa + fpa*z + eta*z^2 + xsi*z^3
+        eta = 3*(fb - fa) - 2*fpa - fpb
+        xsi = fpa + fpb - 2*(fb - fa)
+
+        # find inflection points
+        poly = array([fa, fpa, eta, xsi])
+        roots = P.polyroots(P.polyder(poly))
+        roots = roots[np.logical_and(roots>0, roots<1)]
+        values = r_[fa, P.polyval(roots, poly), fb]
+        
+        return r_[0, roots, 1][argmin(values)]
+
+
+    def find_step_size(self, f, f_grad):
+
+        f_0 = f(0)
+        f_grad_0 = f_grad(0)
+        grad_norm = norm(f_grad_0)
 
         # Calculate maximum alpha where we would always reject it
         # due to the Armijo rule (condition i)
-        mu = (self.minimum_bound - f_x)/(self.rho*dot(f_grad_x, direction))
+        mu = (self.minimum_bound - f_0)/(self.rho*f_grad_0)
 
         # bracketing face, first algorithm part in book
 
-        # doesn't say how to choose this
-        alpha = .5*mu
+        alpha = min(1., mu*.5)
         alpha_prev = 0.
 
-        f_alpha = f_x
+        f_alpha = f_0
         # Begin the bracketing phase
         while True:
             f_prev_alpha = f_alpha
-            f_alpha = f(x + alpha*direction)
+            f_alpha = f(alpha)
 
             if f_alpha < self.minimum_bound:
                 return alpha
 
             # check condition 1 or if new f value is higher
-            if (f_alpha > f_x + alpha*self.rho*dot(f_grad_x, direction) or
+            if (f_alpha > f_0 + alpha*self.rho*f_grad_0 or
                     f_alpha >= f_prev_alpha):
                 a = alpha_prev
                 b = alpha
                 f_a = f_prev_alpha
                 break
 
-            f_grad_alpha = f_grad(x + alpha*direction)
+            f_grad_alpha = f_grad(alpha)
 
             # check condition 2
-            if norm(f_grad_alpha) <= -self.sigma*dot(f_grad_x, direction):
+            if norm(f_grad_alpha) <= -self.sigma*f_grad_0:
                 return alpha
 
             if dot(f_grad_alpha, direction) >= 0:
@@ -319,24 +345,24 @@ class NewtonInexactLine2(OptimizationMethod):
             # TODO:
             # Should do polynomial interpolation here as well
             alpha = 0.5*((a + self.tau2*(b - a)) + (b - self.tau3*(b - a)))
-            f_alpha = f(x + alpha*direction)
+            f_alpha = f(alpha)
 
             # check if alpha satisfies condition 1. If not we need a smaller
             # value choose [a, alpha]
-            if (f_alpha > f_x + self.rho*alpha*dot(f_grad_x, direction) or
+            if (f_alpha > f_0 + self.rho*alpha*f_grad_0 or
                     f_alpha >= f_a):
                 #a = a
                 b = alpha
             else:
-                f_grad_alpha = f_grad(x + alpha*direction)
+                f_grad_alpha = f_grad(alpha)
                 # alpha satisfies condition 1 check condition 2 and if true
                 # return that alpha, otherwise we're too close,
                 #choose [alpha, b]
-                if norm(f_grad_alpha) <= -self.sigma*dot(f_grad_x, direction):
+                if norm(f_grad_alpha) <= -self.sigma*f_grad_0:
                     return alpha
 
                 # changing order with respect to Fletcher to avoid saving a
-                if (b - a)*dot(f_grad_alpha, direction) >= 0:
+                if (b - a)*f_grad_alpha >= 0:
                     b = a
                 a = alpha
                 # else:
@@ -468,7 +494,7 @@ def main():
     print cn.optimize([-3, -3])
     cn = NewtonInexactLine2(opt);
     print "\nNewtonInexactLine.Optimize(...): \n"
-    print cn.optimize([-3, -3])
+    print cn.optimize([-10., -20.])
 
 
 if __name__ == '__main__':
