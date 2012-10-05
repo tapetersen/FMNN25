@@ -335,7 +335,7 @@ class NewtonInexactLine2(OptimizationMethod):
                 if norm(f_grad_alpha) <= -self.sigma*dot(f_grad_x, direction):
                     return alpha
 
-                # changing order with respect to the bok to avoid saving a
+                # changing order with respect to Fletcher to avoid saving a
                 if (b - a)*dot(f_grad_alpha, direction) >= 0:
                     b = a
                 a = alpha
