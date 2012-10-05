@@ -14,6 +14,7 @@ from scipy       import *
 from matplotlib.pyplot import *
 from numpy.linalg import cholesky, inv, norm, LinAlgError
 from numpy import polynomial as P
+from collections import defaultdict
 
 class FunctionTransforms(object):
     """ A class which provides a transform of a given function. 
@@ -160,38 +161,7 @@ class ClassicNewton(OptimizationMethod):
             x = guess
         else:
             x = array([0., 0.]) #starting guess
-        # x* is a local minimizer if grad(f(x*)) = 0 and 
-        # if its hessian is positive definite
-        while(True):
-            grad = self.opt_problem.gradient(x)
-            print norm(grad);
-            if(norm(grad) < 1e-5):
-                return x
-            #x = x - dot(inv(self.opt_problem.hessian(x)), self.opt_problem.gradient(x))
 
-            # use cholesky decomposition as requested in task 3
-            # will throw LinAlgError if decomposition fails
-            # This is not a problem as if that's the case the point 
-            # we're converging to is a saddle point and not a minimum
-            try:
-                factored = lg.cho_factor(self.opt_problem.hessian(x))
-                x = x - lg.cho_solve(factored, self.opt_problem.gradient(x))
-            except LinalgError:
-                raise LinAlgError(
-                    "Hessian not positive definite, converging to saddle point")
-
-class NewtonExactLine(OptimizationMethod):
-    
-    
-    def __init__(self, opt_problem):
-        super(NewtonExactLine, self).__init__(opt_problem)
-        
-
-    def optimize(self, guess=None):
-        if guess is not None:
-            x = guess
-        else:
-            x = array([0., 0.]) #starting guess
         # x* is a local minimizer if grad(f(x*)) = 0 and 
         # if its hessian is positive definite
         
@@ -201,9 +171,9 @@ class NewtonExactLine(OptimizationMethod):
         f_x      = self.opt_problem.objective_function(x)
         G = self.opt_problem.hessian(x)
         H = inv(G)
-        while(True):
+        while True:
 
-            if(norm(f_grad_x) < 1e-5):
+            if norm(f_grad_x) < 1e-5 :
                 return x
         
             direction = self.find_direction(f_grad_x, H, G)
@@ -217,7 +187,7 @@ class NewtonExactLine(OptimizationMethod):
             f_grad_x = f_grad(x)
 
     def find_step_size(self, f, f_grad):
-        return opt.fminbound(f,  0, 1000)
+        return 1
 
     def find_direction(self, f_grad_x, H, G):
         try:
@@ -230,75 +200,31 @@ class NewtonExactLine(OptimizationMethod):
     def update_step(self, x, delta, H, G):
         return None, self.opt_problem.hessian(x+delta)
 
-class NewtonInexactLine(OptimizationMethod):    
+class NewtonExactLine(ClassicNewton):
+    
+    
+    def __init__(self, opt_problem):
+        super(NewtonExactLine, self).__init__(opt_problem)
+        
+    def find_step_size(self, f, f_grad):
+        return opt.fminbound(f,  0, 1000)
+
+
+class NewtonInexactLine(ClassicNewton):    
     """
     Newton method with inexact line search as given in Fletcher
     """
     
-    def __init__(self, opt_problem, minimum_bound=0.0, rho=1e-4, sigma=.9):
-        super(NewtonInexactLine, self).__init__(opt_problem)
-        self.minimum_bound = minimum_bound
-        self.rho = rho
-        self.sigma = sigma
+    def __init__(self, *args, **kwargs):
+        super(NewtonInexactLine, self).__init__(*args, **kwargs)
+        kwargs = defaultdict(lambda: None, **kwargs)
+        self.minimum_bound = kwargs['minimum_bound'] or 0.0
+        self.rho = kwargs['rho'] or 1e-3
+        self.sigma = kwargs['sigma'] or 0.9
         self.tau1 = 9.
         self.tau2 = .1
         self.tau3 = .5
         
-    def optimize(self, guess=None):
-        if guess is not None:
-            x = guess
-        else:
-            x = array([0., 0.]) #starting guess
-        # x* is a local minimizer if grad(f(x*)) = 0 and 
-        # if its hessian is positive definite
-
-        f = self.opt_problem.objective_function
-        f_grad = self.opt_problem.gradient
-        f_grad_x = f_grad(x)
-        grad_norm = norm(f_grad_x)
-        while grad_norm > 1e-5:
-            print "Here"
-            # computes direction for step
-            try:
-                factored = lg.cho_factor(self.opt_problem.hessian(x))
-                direction = lg.cho_solve(factored, f_grad(x))
-            except LinAlgError:
-                raise LinAlgError(
-                    "Hessian indefinite, converging to saddle point")
-
-            alpha = self.find_step_size(
-                lambda alpha: f(x - alpha*direction),
-                lambda alpha: dot(f_grad(x - alpha*direction), -direction)
-            )
-
-            x = x - alpha*direction
-            f_grad_x = self.opt_problem.gradient(x)
-            grad_norm = norm(f_grad_x)
-
-        return x
-
-    def cubic_minimize(fa, fpa, fb, fbp, a, b):
-        """
-        Fits a cubic polynomial to the points and derivatives and returns it's
-        minimum in the interval
-        """
-
-        # Transform to [0, 1] (derivatives change)
-        fpa = fpa*(b-a)
-        fpb = fpb*(b-a)
-
-        # The interpolating polynomial is given by:
-        # fa + fpa*z + eta*z^2 + xsi*z^3
-        eta = 3*(fb - fa) - 2*fpa - fpb
-        xsi = fpa + fpb - 2*(fb - fa)
-
-        # find inflection points
-        poly = array([fa, fpa, eta, xsi])
-        roots = P.polyroots(P.polyder(poly))
-        roots = roots[np.logical_and(roots>0, roots<1)]
-        values = r_[fa, P.polyval(roots, poly), fb]
-        
-        return r_[0, roots, 1][argmin(values)]
 
 
     def find_step_size(self, f, f_grad):
@@ -383,126 +309,56 @@ class NewtonInexactLine(OptimizationMethod):
                 # else:
                     #b = b
 
+    def cubic_minimize(fa, fpa, fb, fbp, a, b):
+        """
+        Fits a cubic polynomial to the points and derivatives and returns it's
+        minimum in the interval
+        """
+
+        # Transform to [0, 1] (derivatives change)
+        fpa = fpa*(b-a)
+        fpb = fpb*(b-a)
+
+        # The interpolating polynomial is given by:
+        # fa + fpa*z + eta*z^2 + xsi*z^3
+        eta = 3*(fb - fa) - 2*fpa - fpb
+        xsi = fpa + fpb - 2*(fb - fa)
+
+        # find inflection points
+        poly = array([fa, fpa, eta, xsi])
+        roots = P.polyroots(P.polyder(poly))
+        roots = roots[np.logical_and(roots>0, roots<1)]
+        values = r_[fa, P.polyval(roots, poly), fb]
+        
+        return r_[0, roots, 1][argmin(values)]
+
 class QuasiNewtonBroyden(NewtonInexactLine):    
     
     def __init__(self, *args, **kwargs):
         super(QuasiNewtonBroyden, self).__init__(*args, **kwargs)
         
-    def optimize(self, guess=None):
-        if guess is not None:
-            x = guess
-        else:
-            x = array([0., 0.]) #starting guess
-        # x* is a local minimizer if grad(f(x*)) = 0 and 
-        # if its hessian is positive definite
-
-        f = self.opt_problem.objective_function
+    def update_step(self, x, delta, H, G):
         f_grad = self.opt_problem.gradient
-        f_grad_x = f_grad(x)
-        grad_norm = norm(f_grad_x)
-        H = inv(self.opt_problem.hessian(x))
-        while grad_norm > 1e-5:
-            print H
+        gamma = f_grad(x+delta) - f_grad(x)
+        H = H + outer( (delta - dot(H, gamma)) / 
+                 (dot(delta, dot(H, gamma))), dot(delta, H) )
+        return H, None
 
-            direction = dot(H, f_grad_x)
+    def find_direction(self, f_grad_x, H, G):
+        return dot(H, f_grad_x)
 
-            alpha = self.find_step_size(
-                lambda alpha: f(x - alpha*direction),
-                lambda alpha: dot(f_grad(x - alpha*direction), -direction)
-            )
-
-            delta = -alpha*direction
-            x = x + delta
-            f_grad_x_prev = f_grad_x
-            f_grad_x = self.opt_problem.gradient(x)
-            gamma = f_grad_x - f_grad_x_prev
-
-            H = H + outer( (delta - dot(H, gamma)) / 
-                     (dot(delta, dot(H, gamma))), dot(delta, H) )
-
-            print norm(H - inv(self.opt_problem.hessian(x)))
-
-            grad_norm = norm(f_grad_x)
-        return x
-
-class QuasiNewtonBroydenBad(NewtonInexactLine):    
+class QuasiNewtonBroydenBad(QuasiNewtonBroyden):    
     
     def __init__(self, *args, **kwargs):
         super(QuasiNewtonBroydenBad, self).__init__(*args, **kwargs)
         
-    def optimize(self, guess=None):
-        if guess is not None:
-            x = guess
-        else:
-            x = array([0., 0.]) #starting guess
-        # x* is a local minimizer if grad(f(x*)) = 0 and 
-        # if its hessian is positive definite
-
-        f = self.opt_problem.objective_function
+    def update_step(self, x, delta, H, G):
         f_grad = self.opt_problem.gradient
-        f_grad_x = f_grad(x)
-        grad_norm = norm(f_grad_x)
-        H = self.opt_problem.hessian(x)
-        while grad_norm > 1e-5:
+        gamma = f_grad(x+delta) - f_grad(x)
+        H = H + outer((delta - dot(H, gamma)) / dot(gamma, gamma),
+                      gamma)
+        return H, None
 
-            direction = dot(H, f_grad_x)
-
-            alpha = self.find_step_size(
-                lambda alpha: f(x - alpha*direction),
-                lambda alpha: dot(f_grad(x - alpha*direction), -direction))
-
-            delta = -alpha*direction
-            x = x + delta
-            f_grad_x_prev = f_grad_x
-            f_grad_x = self.opt_problem.gradient(x)
-            gamma = f_grad_x - f_grad_x_prev
-
-            H = H + outer(
-                (delta - dot(H, gamma)) / dot(gamma, gamma),
-                gamma )
-
-            grad_norm = norm(f_grad_x)
-        return x
-
-class QuasiNewtonDFP(NewtonInexactLine):    
-    
-    def __init__(self, *args, **kwargs):
-        super(QuasiNewtonBroydenBad, self).__init__(*args, **kwargs)
-        
-    def optimize(self, guess=None):
-        if guess is not None:
-            x = guess
-        else:
-            x = array([0., 0.]) #starting guess
-        # x* is a local minimizer if grad(f(x*)) = 0 and 
-        # if its hessian is positive definite
-
-        f = self.opt_problem.objective_function
-        f_grad = self.opt_problem.gradient
-        f_grad_x = f_grad(x)
-        grad_norm = norm(f_grad_x)
-        H = self.opt_problem.hessian(x)
-        while grad_norm > 1e-5:
-
-            direction = dot(H, f_grad_x)
-
-            alpha = self.find_step_size(
-                lambda alpha: f(x - alpha*direction),
-                lambda alpha: dot(f_grad(x - alpha*direction), -direction))
-
-            delta = -alpha*direction
-            x = x + delta
-            f_grad_x_prev = f_grad_x
-            f_grad_x = self.opt_problem.gradient(x)
-            gamma = f_grad_x - f_grad_x_prev
-
-            H = H + outer(
-                (delta - dot(H, gamma)) / dot(gamma, gamma),
-                gamma )
-
-            grad_norm = norm(f_grad_x)
-        return x
-                        
             
 def main():
     def rosenbrock(x):
