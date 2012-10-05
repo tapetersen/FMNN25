@@ -173,7 +173,7 @@ class ClassicNewton(OptimizationMethod):
         H = inv(G)
         while True:
 
-            if norm(f_grad_x) < 1e-5 :
+            if norm(f_grad_x) < 1e-4 :
                 return x
         
             direction = self.find_direction(f_grad_x, H, G)
@@ -182,7 +182,7 @@ class ClassicNewton(OptimizationMethod):
                 f_grad=lambda alpha: dot(f_grad(x - alpha*direction), -direction))
             
             delta = -alpha*direction
-            H, G = self.update_step(x, delta, H, G) 
+            H, G = self.update_hessian(x, delta, H, G) 
             x = x + delta
             f_grad_x = f_grad(x)
 
@@ -197,7 +197,7 @@ class ClassicNewton(OptimizationMethod):
             raise LinAlgError(
                 "Hessian not positive definite, converging to saddle point")
 
-    def update_step(self, x, delta, H, G):
+    def update_hessian(self, x, delta, H, G):
         return None, self.opt_problem.hessian(x+delta)
 
 class NewtonExactLine(ClassicNewton):
@@ -336,11 +336,13 @@ class QuasiNewtonBroyden(NewtonInexactLine):
     def __init__(self, *args, **kwargs):
         super(QuasiNewtonBroyden, self).__init__(*args, **kwargs)
         
-    def update_step(self, x, delta, H, G):
+    def update_hessian(self, x, delta, H, G):
+        #print str(norm(inv(self.opt_problem.hessian(x))-H), 'fro')
         f_grad = self.opt_problem.gradient
         gamma = f_grad(x+delta) - f_grad(x)
-        H = H + outer( (delta - dot(H, gamma)) / 
-                 (dot(delta, dot(H, gamma))), dot(delta, H) )
+        u = delta - dot(H, gamma)
+        a = 1/dot(u, gamma)
+        H = H + a*outer(u, u)
         return H, None
 
     def find_direction(self, f_grad_x, H, G):
@@ -351,7 +353,7 @@ class QuasiNewtonBroydenBad(QuasiNewtonBroyden):
     def __init__(self, *args, **kwargs):
         super(QuasiNewtonBroydenBad, self).__init__(*args, **kwargs)
         
-    def update_step(self, x, delta, H, G):
+    def update_hessian(self, x, delta, H, G):
         f_grad = self.opt_problem.gradient
         gamma = f_grad(x+delta) - f_grad(x)
         H = H + outer((delta - dot(H, gamma)) / dot(gamma, gamma),
@@ -370,22 +372,24 @@ def main():
     def F_grad(x):
         return array([2*x[0]+x[1],x[0]+2*x[1]])
 
+    guess = [1.5, 1.5]
+
     opt = OptimizationProblem(rosenbrock, 2)
     cn  = ClassicNewton(opt)
     print "\nClassicNewton.Optimize(...): \n"
-    print cn.optimize([-3, -3])
+    print cn.optimize(guess)
     cn  = NewtonExactLine(opt)
     print "\nNewtonExactLine.Optimize(...): \n"
-    print cn.optimize([-3, -3])
+    print cn.optimize(guess)
     cn = NewtonInexactLine(opt);
     print "\nNewtonInexact.Optimize(...): \n"
-    print cn.optimize([-10., -20.])
+    print cn.optimize(guess)
     cn = QuasiNewtonBroyden(opt);
     print "\nQuasiNewtonBroyden.Optimize(...): \n"
-    print cn.optimize([-10., -20.])
+    print cn.optimize(guess)
     cn = QuasiNewtonBroydenBad(opt);
     print "\nQuasiNewtonBroydenBad.Optimize(...): \n"
-    print cn.optimize([-10., -20.])
+    print cn.optimize(guess)
 
 
 if __name__ == '__main__':
