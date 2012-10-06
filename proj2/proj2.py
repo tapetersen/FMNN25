@@ -104,33 +104,6 @@ class FunctionTransforms(object):
                            ## I guess), if hess isn't positive definite.
         return hess
 
-    def hessian2(self, x):
-        """ Approximates the hessian using (central) finite differences of degree 2
-        A symmtrizing step: hessian = .5*(hessian + hessian^T) is
-        also performed
-        """
-        hess = zeros((self.dim, self.dim))
-        h    = 1e-5
-        # Approximates hessian using gradient, see 
-        # http://v8doc.sas.com/sashtml/ormp/chap5/sect28.htm
-        # TODO: We don't need to compute this many values since its
-        # symmetric. If we do t more efficiently we don't need
-        # the symmetrizing step (I think). - B
-        for i in range(self.dim):
-            for j in range(self.dim):
-                step1     = zeros(self.dim)
-                step2     = zeros(self.dim)
-                step1[j]  = h
-                step2[i]  = h
-                grad1 = (self.gradient(x+step1) - self.gradient(x-step1))/(4.*h)
-                grad2 = (self.gradient(x+step2) - self.gradient(x-step2))/(4.*h)
-                hess[i,j] = grad1[i] + grad2[j]
-        # Symmetrizing step. 
-        hess = 0.5*(hess + transpose(hess))
-        #L = cholesky(hess) # Raises LinAlgError if (but not only if,
-                           ## I guess), if hess isn't positive definite.
-        return hess
-
     def __call__(self, x):
         """
         Evaluation function that performs the transfrm specfied,
@@ -226,14 +199,15 @@ class ClassicNewton(OptimizationMethod):
                 break
         
             direction = self.find_direction(f_grad_x, H, G)
-            if dot(-direction, f_grad_x) > 0:
-                raise Exception("warning gradient positive in direction")
+            #assert dot(-direction, f_grad_x) < 0:
             alpha = self.find_step_size(
                 f=lambda alpha: f(x - alpha*direction),
                 f_grad=lambda alpha: dot(f_grad(x - alpha*direction), -direction))
             
             delta = -alpha*direction
             H, G = self.update_hessian(x, delta, H, G) 
+            print "H: ", H
+            print "G: ", G
             x = x + delta
             f_grad_x = f_grad(x)
 
@@ -256,7 +230,7 @@ class ClassicNewton(OptimizationMethod):
                 "Hessian not positive definite, converging to saddle point")
 
     def update_hessian(self, x, delta, H, G):
-        return None, self.opt_problem.hessian(x + delta)
+        return (None, self.opt_problem.hessian(x + delta))
 
     def plot(self):
         # find min/max of points
@@ -388,7 +362,6 @@ class NewtonInexactLine(ClassicNewton):
             else:
                 alpha = (left + right)*0.5
 
-            print left, right, alpha
             # check if alpha satisfies condition 1. If not we need a smaller
             # value choose [a, alpha]
             f_alpha = f(alpha)
@@ -412,6 +385,27 @@ class NewtonInexactLine(ClassicNewton):
                     #b = b
 
 
+class QuasiNewtonBFSG(NewtonInexactLine):    
+    """ Implemented as on  http://en.wikipedia.org/wiki/BFGS_method """
+    
+    def __init__(self, *args, **kwargs):
+        super(QuasiNewtonBFSG, self).__init__(*args, **kwargs)
+        
+    def update_hessian(self, x, delta, H, G):
+        f_grad = self.opt_problem.gradient
+        gamma = f_grad(x+delta) - f_grad(x)
+        d_dot_g = dot(delta, gamma)
+        H_dot_g = dot(H, gamma)
+        H = H + ( (d_dot_g+dot(gamma, H_dot_g))*
+                    outer(delta, delta)/d_dot_g**2 
+                 -
+                (outer(H_dot_g, delta) + dot(outer(delta, gamma), H))/
+                d_dot_g)
+
+        return H, None
+
+    def find_direction(self, f_grad_x, H, G):
+        return dot(H, f_grad_x)
 class QuasiNewtonBroyden(NewtonInexactLine):    
     
     def __init__(self, *args, **kwargs):
@@ -419,7 +413,6 @@ class QuasiNewtonBroyden(NewtonInexactLine):
         
     def update_hessian(self, x, delta, H, G):
         #print str(norm(inv(self.opt_problem.hessian(x))-H, 'fro'))
-        #print x
         f_grad = self.opt_problem.gradient
         gamma = f_grad(x+delta) - f_grad(x)
         u = delta - dot(H, gamma)
@@ -488,18 +481,22 @@ def main():
     guess = array([-1.0, 1.0])
 
     opt = OptimizationProblem(rosenbrock, 2)
-    cn  = ClassicNewton(opt)
-    print "\nClassicNewton.Optimize(...): \n"
-    print cn.optimize(guess)
-    cn  = NewtonExactLine(opt)
-    print "\nNewtonExactLine.Optimize(...): \n"
-    print cn.optimize(guess)
-    cn = NewtonInexactLine(opt);
-    print "\nNewtonInexact.Optimize(...): \n"
+    #cn  = ClassicNewton(opt)
+    #print "\nClassicNewton.Optimize(...): \n"
+    #print cn.optimize(guess)
+    #cn  = NewtonExactLine(opt)
+    #print "\nNewtonExactLine.Optimize(...): \n"
+    #print cn.optimize(guess)
+    #cn = NewtonInexactLine(opt);
+    #print "\nNewtonInexact.Optimize(...): \n"
+    #print cn.optimize(guess)
+    #cn = QuasiNewtonBroyden(opt);
+    #print "\nQuasiNewtonBroyden.Optimize(...): \n"
+    #print cn.optimize(guess, True)
+    cn = QuasiNewtonBFSG(opt)
+    print "\nQuasiNewtonBFSG.Optimize(...): \n"
     print cn.optimize(guess, True)
-    cn = QuasiNewtonBroyden(opt);
-    print "\nQuasiNewtonBroyden.Optimize(...): \n"
-    print cn.optimize(guess, True)
+    return 
     cn = QuasiNewtonBroydenBad(opt);
     print "\nQuasiNewtonBroydenBad.Optimize(...): \n"
     print cn.optimize(guess)
