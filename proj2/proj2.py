@@ -183,6 +183,8 @@ class ClassicNewton(OptimizationMethod):
                 break
         
             direction = self.find_direction(f_grad_x, H, G)
+            if dot(-direction, f_grad_x) > 0:
+                raise Exception("warning gradient positive in direction")
             alpha = self.find_step_size(
                 f=lambda alpha: f(x - alpha*direction),
                 f_grad=lambda alpha: dot(f_grad(x - alpha*direction), -direction))
