@@ -49,7 +49,7 @@ class FunctionTransforms(object):
         self.dim  = dimension
 
 
-    def gradient_old(self, x):
+    def gradient(self, x):
         grad = zeros(self.dim)
         h    = 1e-5 
         for i in range(self.dim):
@@ -59,7 +59,7 @@ class FunctionTransforms(object):
 
         return grad
 
-    def gradient(self, x, fx=None):
+    def gradient2(self, x, fx=None):
         """Approximates the gradient using (central) finite differences 
         of degree 1, or forwards if fx is supplied
         """
@@ -385,6 +385,25 @@ class NewtonInexactLine(ClassicNewton):
                     #b = b
 
 
+class QuasiNewtonDFP(NewtonInexactLine):    
+    """ Implemented as in lecture 3 """
+    
+    def __init__(self, *args, **kwargs):
+        super(QuasiNewtonDFP, self).__init__(*args, **kwargs)
+        
+    def update_hessian(self, x, delta, H, G):
+        f_grad = self.opt_problem.gradient
+        gamma = f_grad(x+delta) - f_grad(x)
+        d_dot_g = dot(delta, gamma)
+        H_dot_g = dot(H, gamma)
+        H = H + (outer(delta, delta)/d_dot_g - 
+                 dot(outer(H_dot_g, gamma), H)/dot(gamma, H_dot_g))
+
+        return H, None
+
+    def find_direction(self, f_grad_x, H, G):
+        return dot(H, f_grad_x)
+
 class QuasiNewtonBFSG(NewtonInexactLine):    
     """ Implemented as on  http://en.wikipedia.org/wiki/BFGS_method """
     
@@ -406,6 +425,7 @@ class QuasiNewtonBFSG(NewtonInexactLine):
 
     def find_direction(self, f_grad_x, H, G):
         return dot(H, f_grad_x)
+
 class QuasiNewtonBroyden(NewtonInexactLine):    
     
     def __init__(self, *args, **kwargs):
@@ -493,8 +513,11 @@ def main():
     #cn = QuasiNewtonBroyden(opt);
     #print "\nQuasiNewtonBroyden.Optimize(...): \n"
     #print cn.optimize(guess, True)
-    cn = QuasiNewtonBFSG(opt)
-    print "\nQuasiNewtonBFSG.Optimize(...): \n"
+    #cn = QuasiNewtonBFSG(opt)
+    #print "\nQuasiNewtonBFSG.Optimize(...): \n"
+    #print cn.optimize(guess, True)
+    cn = QuasiNewtonDFP(opt)
+    print "\nQuasiNewtonDFP.Optimize(...): \n"
     print cn.optimize(guess, True)
     return 
     cn = QuasiNewtonBroydenBad(opt);
