@@ -15,7 +15,7 @@ from matplotlib.pyplot import *
 from numpy.linalg import cholesky, inv, norm, LinAlgError
 from numpy import polynomial as P
 from collections import defaultdict
-import chebyquad_problem__ as cqp
+import chebyquad as cqp
 
 class FunctionTransforms(object):
     """ A class which provides a transform of a given function. 
@@ -173,11 +173,8 @@ class ClassicNewton(OptimizationMethod):
         super(ClassicNewton, self).__init__(opt_problem)
         
 
-    def optimize(self, guess=None, debug=False):
-        if guess is not None:
-            x = guess
-        else:
-            x = array([0., 0.]) #starting guess
+    def optimize(self, guess, debug=False):
+        x = guess
 
         if debug:
             self.xs = []
@@ -501,27 +498,27 @@ def main():
         return (x[0]+1)**2 + (x[1]-1)**2
     guess = x=linspace(0,1,2)
 
-    opt = OptimizationProblem(f)
-    #cn  = ClassicNewton(opt)
+    op = OptimizationProblem(f)
+    #cn  = ClassicNewton(op)
     #print "\nClassicNewton.Optimize(...): \n"
     #print cn.optimize(guess)
-    cn  = QuasiNewtonBFSG(opt)
+    cn  = QuasiNewtonBFSG(op)
     print "\nNewtonExactLine.Optimize(...): \n"
     print cn.optimize(guess)
-    #cn = NewtonInexactLine(opt);
+    #cn = NewtonInexactLine(op);
     #print "\nNewtonInexact.Optimize(...): \n"
     #print cn.optimize(guess)
-    cn = QuasiNewtonBroyden(opt);
+    cn = QuasiNewtonBroyden(op);
     print "\nQuasiNewtonBroyden.Optimize(...): \n"
     print cn.optimize(guess, True)
-    #cn = QuasiNewtonBFSG(opt)
+    #cn = QuasiNewtonBFSG(op)
     #print "\nQuasiNewtonBFSG.Optimize(...): \n"
     #print cn.optimize(guess, True)
-    #cn = QuasiNewtonDFP(opt)
+    #cn = QuasiNewtonDFP(op)
     #print "\nQuasiNewtonDFP.Optimize(...): \n"
     #print cn.optimize(guess, True)
     #return 
-    #cn = QuasiNewtonBroydenBad(opt);
+    #cn = QuasiNewtonBroydenBad(op);
     #print "\nQuasiNewtonBroydenBad.Optimize(...): \n"
     #print cn.optimize(guess)
 
