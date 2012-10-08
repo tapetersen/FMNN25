@@ -202,17 +202,16 @@ class ClassicNewton(OptimizationMethod):
             
             delta = -alpha*direction
             H, G = self.update_hessian(x, delta, H, G) 
-            print "H: ", H
-            print "G: ", G
+            #print "H: ", H
+            #print "G: ", G
             x = x + delta
             f_grad_x = f_grad(x)
 
         if debug:
             self.xs = array(self.xs)
             print self.xs
-            if x.size == 2
+            if x.size == 2:
                 self.plot()
-
 
         return x
 
@@ -525,13 +524,15 @@ def main():
         return (x[0]+1)**2 + (x[1]-1)**2
     guess = array([-1.0,1.0])
 
-    op = OptimizationProblem(rosenbrock)
+    from chebyquad import chebyquad, gradchebyquad
+    op = OptimizationProblem(chebyquad)
+    guess = linspace(0, 8, 8)
     #cn  = ClassicNewton(op)
     #print "\nClassicNewton.Optimize(...): \n"
     #print cn.optimize(guess)
-    #cn  = QuasiNewtonBFSG(op)
-    #print "\nBFSG.Optimize(...): \n"
-    #print cn.optimize(guess)
+    cn  = QuasiNewtonBFSG(op)
+    print "\nBFSG.Optimize(...): \n"
+    print cn.optimize(guess, True)
     #cn = NewtonInexactLine(op);
     #print "\nNewtonInexact.Optimize(...): \n"
     #print cn.optimize(guess)
