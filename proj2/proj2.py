@@ -5,7 +5,6 @@
 
 from  __future__  import division
 
-#import ipdb
 import sys
 import scipy.optimize as opt
 import scipy.linalg as lg
@@ -211,7 +210,9 @@ class ClassicNewton(OptimizationMethod):
         if debug:
             self.xs = array(self.xs)
             print self.xs
-            self.plot()
+            if x.size == 2
+                self.plot()
+
 
         return x
 
