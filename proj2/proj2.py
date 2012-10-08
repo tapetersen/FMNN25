@@ -15,6 +15,7 @@ from matplotlib.pyplot import *
 from numpy.linalg import cholesky, inv, norm, LinAlgError
 from numpy import polynomial as P
 from collections import defaultdict
+import chebyquad_problem__ as cqp
 
 class FunctionTransforms(object):
     """ A class which provides a transform of a given function. 
@@ -28,7 +29,7 @@ class FunctionTransforms(object):
     The transforms are constructed by finite differences. 
     """
     
-    def __init__(self, function, dimension,
+    def __init__(self, function, 
                  gradient = False, hessian = False):
         """
         The constructor receives information abut what kind of transform is needed
@@ -46,14 +47,13 @@ class FunctionTransforms(object):
         self.grad = gradient
         self.hess = hessian
         self.f    = function
-        self.dim  = dimension
 
 
     def gradient(self, x):
-        grad = zeros(self.dim)
+        grad = zeros(x.size)
         h    = 1e-5 
-        for i in range(self.dim):
-            step    = zeros(self.dim)
+        for i in range(x.size):
+            step    = zeros(x.size)
             step[i] = h
             grad[i] = (self.f(x+step) - self.f(x-step))/(2.*h)
 
@@ -89,8 +89,8 @@ class FunctionTransforms(object):
         # TODO: We don't need to compute this many values since its
         # symmetric. If we do t more efficiently we don't need
         # the symmetrizing step (I think). - B
-        for i in range(self.dim):
-            for j in range(self.dim):
+        for i in range(x.size):
+            for j in range(x.size):
                 step1     = zeros_like(x)
                 step2     = zeros_like(x)
                 step1[j]  = h
@@ -121,7 +121,7 @@ class OptimizationProblem(object):
     which can be used to optimize it. 
     """
     
-    def __init__(self, objective_function, dimension,
+    def __init__(self, objective_function,
                             function_gradient = None):
         """The user provides a function, the functions dimension (\in R^n) and
         optionally its gradient (given as a callable function)
@@ -131,7 +131,6 @@ class OptimizationProblem(object):
         
         """
         
-        self.dim = dimension
         self.objective_function = objective_function
         self.is_function_gradient = False;
         """
@@ -144,9 +143,9 @@ class OptimizationProblem(object):
             self.gradient = function_gradient
             self.is_function_gradient = True;
         else:
-            self.gradient = FunctionTransforms(objective_function, dimension,
+            self.gradient = FunctionTransforms(objective_function, 
                                             gradient=True)
-        self.hessian = FunctionTransforms(objective_function, dimension, 
+        self.hessian = FunctionTransforms(objective_function,  
                                             hessian=True)
     def __call__(self, x):
         """
@@ -225,7 +224,7 @@ class ClassicNewton(OptimizationMethod):
         try:
             factored = lg.cho_factor(G)
             return lg.cho_solve(factored, f_grad_x)
-        except LinalgError:
+        except LinAlgError:
             raise LinAlgError(
                 "Hessian not positive definite, converging to saddle point")
 
@@ -498,31 +497,33 @@ def F_grad(x):
 
 def main():
 
-    guess = array([-1.0, 1.0])
+    def f(x):
+        return (x[0]+1)**2 + (x[1]-1)**2
+    guess = x=linspace(0,1,2)
 
-    opt = OptimizationProblem(rosenbrock, 2)
+    opt = OptimizationProblem(f)
     #cn  = ClassicNewton(opt)
     #print "\nClassicNewton.Optimize(...): \n"
     #print cn.optimize(guess)
-    #cn  = NewtonExactLine(opt)
-    #print "\nNewtonExactLine.Optimize(...): \n"
-    #print cn.optimize(guess)
+    cn  = QuasiNewtonBFSG(opt)
+    print "\nNewtonExactLine.Optimize(...): \n"
+    print cn.optimize(guess)
     #cn = NewtonInexactLine(opt);
     #print "\nNewtonInexact.Optimize(...): \n"
     #print cn.optimize(guess)
-    #cn = QuasiNewtonBroyden(opt);
-    #print "\nQuasiNewtonBroyden.Optimize(...): \n"
-    #print cn.optimize(guess, True)
+    cn = QuasiNewtonBroyden(opt);
+    print "\nQuasiNewtonBroyden.Optimize(...): \n"
+    print cn.optimize(guess, True)
     #cn = QuasiNewtonBFSG(opt)
     #print "\nQuasiNewtonBFSG.Optimize(...): \n"
     #print cn.optimize(guess, True)
-    cn = QuasiNewtonDFP(opt)
-    print "\nQuasiNewtonDFP.Optimize(...): \n"
-    print cn.optimize(guess, True)
-    return 
-    cn = QuasiNewtonBroydenBad(opt);
-    print "\nQuasiNewtonBroydenBad.Optimize(...): \n"
-    print cn.optimize(guess)
+    #cn = QuasiNewtonDFP(opt)
+    #print "\nQuasiNewtonDFP.Optimize(...): \n"
+    #print cn.optimize(guess, True)
+    #return 
+    #cn = QuasiNewtonBroydenBad(opt);
+    #print "\nQuasiNewtonBroydenBad.Optimize(...): \n"
+    #print cn.optimize(guess)
 
 
 if __name__ == '__main__':
