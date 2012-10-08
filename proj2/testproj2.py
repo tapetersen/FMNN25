@@ -37,6 +37,26 @@ def test_hessian():
     
     
 
+def test_minimize():
+    near = lambda a, b: abs(a-b) < 1e-3
+
+    # basic minimum
+    assert near(.5, p.cubic_minimize(1., -1, 1, 1, 0, 1))
+
+    # scaling and translation of interval
+    assert near(1, p.cubic_minimize(1., -1, 1, 1, 0, 2))
+    assert near(2, p.cubic_minimize(1., -1, 1, 1, 1, 3))
+
+    # endpoints for concave function
+    assert near(0, p.cubic_minimize(1.1, 1, 1.1, -1, 0, 1))
+    assert near(1, p.cubic_minimize(1.1, 1, 1.0, -1, 0, 1))
+
+    # non trivial minimum
+    assert near(.33, p.cubic_minimize(1., -1, 1, 0, 0, 1))
+
+    
+
+
 def test_gradient():
     def rosenbrock(x):
         return 100*(x[1]-x[0])**2+(1-x[0])**2
@@ -47,8 +67,8 @@ def test_gradient():
         return x[0]**2 + x[0]*x[1] + x[1]**2
     def F_grad(x):
         return array([2*x[0]+x[1],x[0]+2*x[1]])
-    opt1 = p.OptimizationProblem(rosenbrock,2)
-    opt2 = p.OptimizationProblem(F,2)
+    opt1 = p.OptimizationProblem(rosenbrock)
+    opt2 = p.OptimizationProblem(F)
     for i in range(-3,3):
         for j in range(-3,3):
             k  = opt1.gradient([float(i),float(j)]) - \

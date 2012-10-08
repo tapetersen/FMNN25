@@ -50,6 +50,7 @@ class FunctionTransforms(object):
 
 
     def gradient(self, x):
+        x = asarray(x)
         grad = zeros(x.size)
         h    = 1e-5 
         for i in range(x.size):
@@ -64,7 +65,7 @@ class FunctionTransforms(object):
         of degree 1, or forwards if fx is supplied
         """
         # force column vector
-        x = array(x).reshape(-1, 1)
+        x = asarray(x).reshape(-1, 1)
 
         ## hh is matrix with h in diagonal
         h    = 1e-5 
@@ -82,6 +83,7 @@ class FunctionTransforms(object):
         A symmtrizing step: hessian = .5*(hessian + hessian^T) is
         also performed
         """
+        x = asarray(x)
         hess = zeros((x.size, x.size))
         h    = 1e-5
         # Approximates hessian using gradient, see 
@@ -174,7 +176,7 @@ class ClassicNewton(OptimizationMethod):
         
 
     def optimize(self, guess, debug=False):
-        x = guess
+        x = asarray(guess)
 
         if debug:
             self.xs = []
@@ -293,7 +295,7 @@ class NewtonInexactLine(ClassicNewton):
         f_alpha = f_0
         f_grad_alpha = f_grad_0
         # Begin the bracketing phase
-        while True:
+        for it in range(50):
             f_prev_alpha = f_alpha
             f_grad_prev_alpha = f_grad_alpha
             f_alpha = f(alpha)
@@ -336,6 +338,10 @@ class NewtonInexactLine(ClassicNewton):
                     f(right), f_grad(right),
                     left, right)
                 alpha_prev = _alpha
+        else:
+            # bracketing failed horribly
+            print "Warning, couldn't bracket alpha defaulting to 1.0"
+            return 1.0
 
         # check conditions in book (and that the cached values are correct)
         assert f_a == f(a)
@@ -346,7 +352,7 @@ class NewtonInexactLine(ClassicNewton):
         assert f_b > f_0 + b*self.rho*f_grad_0 or f_b >= f_a
 
 
-        while True:
+        for it in range(50):
             left = a + self.tau2*(b - a)
             right = b - self.tau3*(b - a)
             # don't interpolate if too small
@@ -379,6 +385,10 @@ class NewtonInexactLine(ClassicNewton):
                 a = alpha
                 # else:
                     #b = b
+        else:
+            # Sectioning failed horribly
+            print "Warning, couldn't find acceptable alpha defaulting to 1.0"
+            return 1.0
 
 
 class QuasiNewtonDFP(NewtonInexactLine):    
@@ -471,7 +481,7 @@ def cubic_minimize(fa, fpa, fb, fpb, a, b):
 
     # find inflection points
     der = P.polyder(poly)
-    der = P.polyder(poly)/der[2]
+    der = der/der[2]
     disc = der[1]*der[1]/(4)-der[0]
     if disc > 0:
         roots = array([der[1]/2+sqrt(disc), der[1]/2-sqrt(disc)])
@@ -497,14 +507,14 @@ def main():
 
     def f(x):
         return (x[0]+1)**2 + (x[1]-1)**2
-    guess = x=linspace(0,1,2)
+    guess = array([-1.0,1.0])
 
-    op = OptimizationProblem(f)
+    op = OptimizationProblem(rosenbrock)
     #cn  = ClassicNewton(op)
     #print "\nClassicNewton.Optimize(...): \n"
     #print cn.optimize(guess)
     cn  = QuasiNewtonBFSG(op)
-    print "\nNewtonExactLine.Optimize(...): \n"
+    print "\nBFSG.Optimize(...): \n"
     print cn.optimize(guess)
     #cn = NewtonInexactLine(op);
     #print "\nNewtonInexact.Optimize(...): \n"
