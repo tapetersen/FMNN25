@@ -294,7 +294,7 @@ class NewtonInexactLine(ClassicNewton):
         f_alpha = f_0
         f_grad_alpha = f_grad_0
         # Begin the bracketing phase
-        for it in range(50):
+        for it in range(100):
             f_prev_alpha = f_alpha
             f_grad_prev_alpha = f_grad_alpha
             f_alpha = f(alpha)
@@ -456,8 +456,9 @@ class QuasiNewtonBroydenBad(QuasiNewtonBroyden):
     def update_hessian(self, x, delta, H, G):
         f_grad = self.opt_problem.gradient
         gamma = f_grad(x+delta) - f_grad(x)
-        H = H + outer((delta - dot(H, gamma)) / dot(gamma, gamma),
-                      gamma)
+        u = delta-dot(H, gamma)
+        a = 1/dot(u, gamma);
+        H = H + a*outer(u, u)
         return H, None
 
             
@@ -527,15 +528,15 @@ def main():
     #cn  = ClassicNewton(op)
     #print "\nClassicNewton.Optimize(...): \n"
     #print cn.optimize(guess)
-    cn  = QuasiNewtonBFSG(op)
-    print "\nBFSG.Optimize(...): \n"
-    print cn.optimize(guess)
+    #cn  = QuasiNewtonBFSG(op)
+    #print "\nBFSG.Optimize(...): \n"
+    #print cn.optimize(guess)
     #cn = NewtonInexactLine(op);
     #print "\nNewtonInexact.Optimize(...): \n"
     #print cn.optimize(guess)
-    cn = QuasiNewtonBroyden(op);
-    print "\nQuasiNewtonBroyden.Optimize(...): \n"
-    print cn.optimize(guess, True)
+    #cn = QuasiNewtonBroyden(op);
+    #print "\nQuasiNewtonBroyden.Optimize(...): \n"
+    #print cn.optimize(guess, True)
     #cn = QuasiNewtonBFSG(op)
     #print "\nQuasiNewtonBFSG.Optimize(...): \n"
     #print cn.optimize(guess, True)
@@ -543,9 +544,9 @@ def main():
     #print "\nQuasiNewtonDFP.Optimize(...): \n"
     #print cn.optimize(guess, True)
     #return 
-    #cn = QuasiNewtonBroydenBad(op);
-    #print "\nQuasiNewtonBroydenBad.Optimize(...): \n"
-    #print cn.optimize(guess)
+    cn = QuasiNewtonBroydenBad(op);
+    print "\nQuasiNewtonBroydenBad.Optimize(...): \n"
+    print cn.optimize(guess, True)
 
 
 if __name__ == '__main__':
