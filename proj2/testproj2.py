@@ -48,12 +48,14 @@ def test_minimize():
     assert near(2, p.cubic_minimize(1., -1, 1, 1, 1, 3))
 
     # endpoints for concave function
-    assert near(0, p.cubic_minimize(1.1, 1, 1.1, -1, 0, 1))
+    assert near(0, p.cubic_minimize(1.0, 1, 1.1, -1, 0, 1))
     assert near(1, p.cubic_minimize(1.1, 1, 1.0, -1, 0, 1))
 
     # non trivial minimum
-    assert near(.33, p.cubic_minimize(1., -1, 1, 0, 0, 1))
+    assert near(1/3, p.cubic_minimize(1., -1, 1, 0, 0, 1))
 
+    #scaled
+    assert near((1/3)*2+3, p.cubic_minimize(1., -1, 1, 0, 3, 5))
     
 
 

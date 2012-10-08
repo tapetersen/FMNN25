@@ -13,7 +13,6 @@ import scipy.linalg as lg
 from scipy       import *
 from matplotlib.pyplot import *
 from numpy.linalg import cholesky, inv, norm, LinAlgError
-from numpy import polynomial as P
 from collections import defaultdict
 import chebyquad as cqp
 
@@ -351,7 +350,6 @@ class NewtonInexactLine(ClassicNewton):
         assert f_b == f(b)
         assert f_b > f_0 + b*self.rho*f_grad_0 or f_b >= f_a
 
-
         for it in range(50):
             left = a + self.tau2*(b - a)
             right = b - self.tau3*(b - a)
@@ -477,20 +475,36 @@ def cubic_minimize(fa, fpa, fb, fpb, a, b):
     # fa + fpa*z + eta*z^2 + xsi*z^3
     eta = 3*(fb - fa) - 2*fpa - fpb
     xsi = fpa + fpb - 2*(fb - fa)
-    poly = array([fa, fpa, eta, xsi])
+    poly = poly1d([xsi, eta, fpa, fa])
 
     # find inflection points
-    der = P.polyder(poly)
-    der = der/der[2]
-    disc = der[1]*der[1]/(4)-der[0]
-    if disc > 0:
-        roots = array([der[1]/2+sqrt(disc), der[1]/2-sqrt(disc)])
+    if poly.order == 3:
+        der = poly.deriv()
+        if der[2]:
+            der = der/der[2]
+            disc = (der[1]*der[1]/4 - der[0])
+            if disc > 0:
+                points = asarray(
+                    [0.0 ,-der[1]/2+sqrt(disc), -der[1]/2-sqrt(disc), 1.0])
+                points = points[np.logical_and(points >= 0, points <= 1)]
+            else:
+                # can't have minimums
+                points = asarray([0.0, 1.0])
+        else:
+            # can't have minimums
+            points = asarray([0.0, 1.0])
+    elif poly.order == 2:
+        extreme = -poly[1]/(2*poly[2])
+        if extreme < 1 and extreme > 0:
+            points = asarray([0., extreme, 1.])
+        else:
+            points = asarray([0.0, 1.0])
+
     else:
-        roots = array([])
-    roots = roots[np.logical_and(roots>0, roots<1)]
-    values = r_[fa, P.polyval(roots, poly), fb]
-    
-    return r_[0, roots, 1][argmin(values)]*(b-a) + a
+        points = asarray([0.0, 1.0])
+
+    values = poly(points)
+    return points[argmin(values)]*(b-a)+a
 
 # Test functions
 def rosenbrock(x):
