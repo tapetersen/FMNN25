@@ -471,7 +471,8 @@ def cubic_minimize(fa, fpa, fb, fpb, a, b):
 
     # find inflection points
     der = P.polyder(poly)
-    disc = der[1]*der[1]/(4*der[2])-der[0]/der[2]
+    der = P.polyder(poly)/der[2]
+    disc = der[1]*der[1]/(4)-der[0]
     if disc > 0:
         roots = array([der[1]/2+sqrt(disc), der[1]/2-sqrt(disc)])
     else:
