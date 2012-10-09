@@ -15,6 +15,7 @@ Contents:
 
    overview
    code
+   tests
 
 
 Indices and tables

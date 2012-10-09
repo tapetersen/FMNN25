@@ -1,4 +1,4 @@
-Auto generated documentation
+Project 2
 ============================
 
 
@@ -20,6 +20,8 @@ Help classes and methods
    .. automethod:: proj2.OptimizationProblem.__call__
    
 .. autofunction:: proj2.cubic_minimize
+
+
 
 Solvers
 -------------

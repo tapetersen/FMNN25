@@ -12,6 +12,9 @@ from numpy.linalg import cholesky, inv, norm, LinAlgError
 import proj2 as p
 
 def test_hessian():
+    """ Test the the numerical hessian for the rosenbrock function 
+    and a function of a higher order
+    """
     def rosenbrock(x):
         return 100*(x[1]-x[0])**2+(1-x[0])**2
     def rosenbrock_hessian(x):
@@ -34,10 +37,93 @@ def test_hessian():
             print k, abs(k) <1e-2
             print kk, abs(kk) <1e-2
             assert(sum( abs(k) <1e-2 )==4 and (sum( abs(kk) <1e-2 )==9) )
+
+def test_solvers_chebyquad():
+    """
+    Tests the different solvers on the rosenbrock function.
+    """
+    def rosenbrock(x):
+        return 100*(x[1]-x[0]**2)**2+(1-x[0])**2
+    near = lambda x,y: sum(abs(x-y) < 1e-4) == x.size
+        
+    sol = array([1.,1.])
+    guess = array([-1.,-1.])
+    op = p.OptimizationProblem(rosenbrock)
     
+    print "Testing ClassicNewton"
+    cn  = p.ClassicNewton(op)
+    assert near(sol,cn.optimize(guess))
+    
+    print "Testing NewtonInexactLine"
+    cn  = p.NewtonInexactLine(op)
+    assert near(sol,cn.optimize(guess))
+    
+    print "Testing NewtonExactLine"
+    cn  = p.NewtonExactLine(op)
+    assert near(sol,cn.optimize(guess))
+    
+    #print "Testing QuasiNewtonBroyden"
+    #cn  = p.QuasiNewtonBroyden(op)
+    #assert near(sol,cn.optimize(guess))
+    
+    print "Testing QuasiNewtonBroydenBad"
+    cn  = p.QuasiNewtonBroydenBad(op)
+    assert near(sol,cn.optimize(guess))
+    
+    print "Testing QuasiNewtonBFSG"
+    cn  = p.QuasiNewtonBFSG(op)
+    assert near(sol,cn.optimize(guess))
+    
+    print "Testing QuasiNewtonDFP"
+    cn  = p.QuasiNewtonDFP(op)
+    assert near(sol,cn.optimize(guess))
+ 
+
+ 
+def test_solvers_rosenbrock():
+    """
+    Tests the different solvers on the rosenbrock function.
+    """
+    def rosenbrock(x):
+        return 100*(x[1]-x[0]**2)**2+(1-x[0])**2
+    near = lambda x,y: sum(abs(x-y) < 1e-4) == x.size
+        
+    sol = array([1.,1.])
+    guess = array([-1.,-1.])
+    op = p.OptimizationProblem(rosenbrock)
+    
+    print "Testing ClassicNewton"
+    cn  = p.ClassicNewton(op)
+    assert near(sol,cn.optimize(guess))
+    
+    print "Testing NewtonInexactLine"
+    cn  = p.NewtonInexactLine(op)
+    assert near(sol,cn.optimize(guess))
+    
+    print "Testing NewtonExactLine"
+    cn  = p.NewtonExactLine(op)
+    assert near(sol,cn.optimize(guess))
+    
+    #print "Testing QuasiNewtonBroyden"
+    #cn  = p.QuasiNewtonBroyden(op)
+    #assert near(sol,cn.optimize(guess))
+    
+    print "Testing QuasiNewtonBroydenBad"
+    cn  = p.QuasiNewtonBroydenBad(op)
+    assert near(sol,cn.optimize(guess))
+    
+    print "Testing QuasiNewtonBFSG"
+    cn  = p.QuasiNewtonBFSG(op)
+    assert near(sol,cn.optimize(guess))
+    
+    print "Testing QuasiNewtonDFP"
+    cn  = p.QuasiNewtonDFP(op)
+    assert near(sol,cn.optimize(guess))
     
 
 def test_minimize():
+    """ Test the cubic_minimize help function
+    """
     near = lambda a, b: abs(a-b) < 1e-3
 
     # basic minimum
@@ -60,6 +146,8 @@ def test_minimize():
 
 
 def test_gradient():
+    """ Test the gradient using rosenbrock and higher order functions
+    """
     def rosenbrock(x):
         return 100*(x[1]-x[0])**2+(1-x[0])**2
     def rosenbrock_grad(x):

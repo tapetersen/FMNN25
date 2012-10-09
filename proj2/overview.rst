@@ -20,4 +20,4 @@ The solvers are written using inheritance where the Classic Newton method provid
 
 Testing
 --------
-Tests include testing of gradient and hessian computation. 
+Tests include testing of gradient and hessian computation, the minimization function and solvers. 
