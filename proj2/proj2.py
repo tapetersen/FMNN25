@@ -131,7 +131,7 @@ class OptimizationProblem(object):
     """
     
     def __init__(self, objective_function,
-                            function_gradient = None):
+                            function_gradient = None, min_bound=0.0):
         """The user provides a function, the functions dimension (\in R^n) and
         optionally its gradient (given as a callable function)
 
@@ -143,6 +143,8 @@ class OptimizationProblem(object):
         functions. As a default the hessian and gradient is constructed
         numerically. 
         """
+
+        self.min_bound = min_bound
         
         self.objective_function = objective_function
         """ The objective function as a callable attribute """
@@ -205,7 +207,7 @@ class AbstractNewton(object):
             alpha = self.find_step_size(
                 f=lambda alpha: f(x - alpha*direction),
                 f_grad=lambda alpha, f_x=None:
-                    dot(f_grad(x - alpha*direction, f_x), -direction))
+                    dot(f_grad(x - alpha*direction), -direction))
             
             delta = -alpha*direction
             H, G = self.update_hessian(x, delta, H, G) 
@@ -304,129 +306,10 @@ class NewtonInexactLine(NewtonExactLine):
     
     def __init__(self, *args, **kwargs):
         super(NewtonInexactLine, self).__init__(*args, **kwargs)
-        kwargs = defaultdict(lambda: None, **kwargs)
-        self.minimum_bound = kwargs['minimum_bound'] or 0.0
-        self.rho = kwargs['rho'] or 1e-3
-        self.sigma = kwargs['sigma'] or 0.9
-        self.tau1 = 9.
-        self.tau2 = .1
-        self.tau3 = .5
         
-
     def find_step_size(self, f, f_grad):
-        f_0 = f(0)
-        f_grad_0 = f_grad(0, f_0)
-        grad_norm = norm(f_grad_0)
+        return find_step_size(f, f_grad, self.opt_problem.min_bound)
 
-        # Calculate maximum alpha where we would always reject it
-        # due to the Armijo rule (condition i)
-        mu = (self.minimum_bound - f_0)/(self.rho*f_grad_0)
-
-        # bracketing face, first algorithm part in book
-
-        alpha = min(1., mu*.25)
-        alpha_prev = 0.
-
-        f_alpha = f_0
-        f_grad_alpha = f_grad_0
-        # Begin the bracketing phase
-        for it in range(100):
-            f_prev_alpha = f_alpha
-            f_grad_prev_alpha = f_grad_alpha
-            f_alpha = f(alpha)
-
-            if f_alpha < self.minimum_bound:
-                return alpha
-
-            # check condition 1 or if new f value is higher
-            if (f_alpha > f_0 + alpha*self.rho*f_grad_0 or
-                    f_alpha >= f_prev_alpha):
-                a = alpha_prev
-                b = alpha
-                f_a = f_prev_alpha
-                f_b = f_alpha
-                f_grad_a = f_grad_prev_alpha
-                break
-
-            # check condition 2
-            f_grad_alpha = f_grad(alpha, f_alpha)
-            if norm(f_grad_alpha) <= -self.sigma*f_grad_0:
-                return alpha
-
-            if f_grad_alpha >= 0:
-                a = alpha
-                b = alpha_prev
-                f_b = f_prev_alpha
-                f_a = f_alpha
-                f_grad_a = f_grad_alpha
-                break
-
-            if mu < 2*alpha - alpha_prev:
-                alpha_prev = alpha
-                alpha = mu
-            else:
-                _alpha = alpha
-                left = 2*alpha - alpha_prev
-                right = min(mu, alpha+self.tau1*(alpha-alpha_prev))
-                fl = f(left)
-                fr = f(right)
-                alpha = cubic_minimize(
-                    fl, f_grad(left, fl),
-                    fr, f_grad(right, fr),
-                    left, right)
-                alpha_prev = _alpha
-        else:
-            # bracketing failed horribly
-            print "Warning, couldn't bracket alpha defaulting to 1.0"
-            return 1.0
-
-        # check conditions in book (and that the cached values are correct)
-        assert f_a == f(a)
-        assert f_a <= f_0 + a*self.rho*f_grad_0
-        assert f_grad_a == f_grad(a, f_a)
-        assert (b-a)*f_grad_a<0
-        assert f_b == f(b)
-        assert f_b > f_0 + b*self.rho*f_grad_0 or f_b >= f_a
-
-        for it in range(50):
-            left = a + self.tau2*(b - a)
-            right = b - self.tau3*(b - a)
-            # don't interpolate if too small
-            if abs(left-right) > 1e-5:
-                fl = f(left)
-                fr = f(right)
-                alpha = cubic_minimize(
-                    fl, f_grad(left, fl),
-                    fr, f_grad(right, fr ),
-                    left, right)
-            else:
-                alpha = (left + right)*0.5
-
-            # check if alpha satisfies condition 1. If not we need a smaller
-            # value choose [a, alpha]
-            f_alpha = f(alpha)
-            if (f_alpha > f_0 + self.rho*alpha*f_grad_0 or
-                    f_alpha >= f_a):
-                #a = a
-                b = alpha
-            else:
-                # alpha satisfies condition 1 check condition 2 and if true
-                # return that alpha, otherwise we're too close,
-                #choose [alpha, b]
-                f_grad_alpha = f_grad(alpha)
-                if norm(f_grad_alpha) <= -self.sigma*f_grad_0:
-                    return alpha
-
-                # changing order with respect to Fletcher to avoid saving a
-                if (b - a)*f_grad_alpha >= 0:
-                    b = a
-                a = alpha
-                # else:
-                    #b = b
-        else:
-            # Sectioning failed horribly
-            print "Warning, couldn't find acceptable alpha defaulting to 1.0"
-            return 1.0
 
 
 class QuasiNewtonDFP(NewtonInexactLine):    
@@ -500,6 +383,146 @@ class QuasiNewtonBroydenBad(QuasiNewtonBroyden):
         a = 1/dot(u, gamma);
         H = H + a*outer(u, u)
         return H, None
+
+def find_step_size(f, f_grad, min_bound=0.0, debug=False):
+
+    rho = 1e-3
+    sigma = 0.1
+    tau1 = 9
+    tau2 = .1
+    tau3 = .5
+
+    f_0 = f(0)
+    f_grad_0 = f_grad(0, f_0)
+    grad_norm = norm(f_grad_0)
+
+    # Calculate maximum alpha where we would always reject it
+    # due to the Armijo rule (condition i)
+    mu = (min_bound - f_0)/(rho*f_grad_0)
+
+    # bracketing face, first algorithm part in book
+
+    #alpha = min(.1, mu*.01)
+    alpha = min(.1, mu*.01)
+    alpha_prev = 0.
+
+    f_alpha = f_0
+    f_grad_alpha = f_grad_0
+
+    # Begin the bracketing phase
+    for it in range(100):
+        f_prev_alpha = f_alpha
+        f_grad_prev_alpha = f_grad_alpha
+        f_alpha = f(alpha)
+        if debug:
+            f_grad_alpha = f_grad(alpha)
+            print "alpha: %f, f(alpha): %f, f'(alpha'): %f" % \
+                    (alpha, f_alpha, f_grad_alpha)
+
+        if f_alpha <= min_bound:
+            return alpha
+
+        # check condition 1 or if new f value is higher
+        if (f_alpha > f_0 + alpha*rho*f_grad_0 or
+                f_alpha >= f_prev_alpha):
+            if debug:
+                print "alpha fails condition 1 or is rising starting sectioning"
+            a = alpha_prev
+            b = alpha
+            f_a = f_prev_alpha
+            f_b = f_alpha
+            f_grad_a = f_grad_prev_alpha
+            break
+
+        # check condition 2
+        f_grad_alpha = f_grad(alpha, f_alpha)
+        if abs(f_grad_alpha) <= -sigma*f_grad_0:
+            if debug:
+                print "alpha satisfies both conditions returning"
+                print "|f'(alpha)| = %f, f_grad_0 = %f"% (abs(f_grad_alpha),
+                                                          f_grad_0)
+            return alpha
+
+        if f_grad_alpha >= 0:
+            a = alpha
+            b = alpha_prev
+            f_b = f_prev_alpha
+            f_a = f_alpha
+            f_grad_a = f_grad_alpha
+            if debug:
+                print "f'(alpha) >= 0 start sectioning"
+            break
+
+        if mu < 2*alpha - alpha_prev:
+            alpha_prev = alpha
+            alpha = mu
+            if debug:
+                print "alpha has reached mu, last round"
+        else:
+            _alpha = alpha
+            left = 2*alpha - alpha_prev
+            right = min(mu, alpha+tau1*(alpha-alpha_prev))
+            fl = f(left)
+            fr = f(right)
+            alpha = cubic_minimize(
+                fl, f_grad(left, fl),
+                fr, f_grad(right, fr),
+                left, right)
+            if debug:
+                print "minimizing on interval [%f, %f]" % (left, right)
+            alpha_prev = _alpha
+    else:
+        # bracketing failed horribly
+        print "Warning, couldn't bracket alpha defaulting to 1.0"
+        return 1.0
+
+    # check conditions in book (and that the cached values are correct)
+    assert f_a == f(a)
+    assert f_a <= f_0 + a*rho*f_grad_0
+    assert f_grad_a == f_grad(a, f_a)
+    assert (b-a)*f_grad_a<0
+    assert f_b == f(b)
+    assert f_b > f_0 + b*rho*f_grad_0 or f_b >= f_a
+
+    for it in range(50):
+        left = a + tau2*(b - a)
+        right = b - tau3*(b - a)
+        # don't interpolate if too small
+        if abs(left-right) > 1e-5:
+            fl = f(left)
+            fr = f(right)
+            alpha = cubic_minimize(
+                fl, f_grad(left, fl),
+                fr, f_grad(right, fr ),
+                left, right)
+        else:
+            alpha = (left + right)*0.5
+
+        # check if alpha satisfies condition 1. If not we need a smaller
+        # value choose [a, alpha]
+        f_alpha = f(alpha)
+        if (f_alpha > f_0 + rho*alpha*f_grad_0 or
+                f_alpha >= f_a):
+            #a = a
+            b = alpha
+        else:
+            # alpha satisfies condition 1 check condition 2 and if true
+            # return that alpha, otherwise we're too close,
+            #choose [alpha, b]
+            f_grad_alpha = f_grad(alpha)
+            if norm(f_grad_alpha) <= -sigma*f_grad_0:
+                return alpha
+
+            # changing order with respect to Fletcher to avoid saving a
+            if (b - a)*f_grad_alpha >= 0:
+                b = a
+            a = alpha
+            # else:
+                #b = b
+    else:
+        # Sectioning failed horribly
+        print "Warning, couldn't find acceptable alpha defaulting to 1.0"
+        return 1.0
 
             
 def cubic_minimize(fa, fpa, fb, fpb, a, b):

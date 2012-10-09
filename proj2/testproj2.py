@@ -176,6 +176,15 @@ def test_minimize():
     assert near((1/3)*2+3, p.cubic_minimize(1., -1, 1, 0, 3, 5))
     
 
+def test_linesearch():
+    """ Tests the linesearch on example in book """
+
+    f = lambda alpha: 100*alpha**4+(1-alpha)**2
+    f_grad = lambda alpha, _=None: 400*alpha**3-2*(1-alpha)
+
+    alpha = p.find_step_size(f, f_grad, debug=True)
+    print alpha
+    assert 0.15 < alpha and alpha < 0.17
 
 
 def test_gradient():
