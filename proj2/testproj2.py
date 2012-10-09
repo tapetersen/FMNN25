@@ -156,7 +156,7 @@ def test_solvers_chebyquad():
     """
     Tests the different solvers on the rosenbrock function.
     """
-    near = lambda x,y: sum(abs(x-y) < 1e-4) == x.size
+    near = lambda x,y: norm(x-y) < 1e-2
         
     sol = array([1.,1.])
     guess = array([-1.,-1.])
@@ -188,6 +188,7 @@ def test_solvers_chebyquad():
     
     print "Testing QuasiNewtonDFP"
     cn  = p.QuasiNewtonDFP(op)
+    print norm(sol-cn.optimize(guess))
     assert near(sol,cn.optimize(guess))
  
 
@@ -196,7 +197,7 @@ def test_solvers_rosenbrock():
     """
     Tests the different solvers on the rosenbrock function.
     """
-    near = lambda x,y: sum(abs(x-y) < 1e-4) == x.size
+    near = lambda x,y: norm(x-y) < 1e-2
         
     sol = array([1.,1.])
     guess = array([-1.,-1.])

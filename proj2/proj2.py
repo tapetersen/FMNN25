@@ -111,16 +111,16 @@ class FunctionTransforms(object):
                            ## I guess), if hess isn't positive definite.
         return hess
 
-    def __call__(self, x):
+    def __call__(self, x, *args):
         """
         Returns the transform at point x for the transform specified when
         creating an instance of the class.
         """
         
         if self.grad:
-            return self.gradient(x)
+            return self.gradient(x, *args)
         if self.hess:
-            return self.hessian(x)
+            return self.hessian(x, *args)
         #raise Exception("Transform incompletely specified")
         #This eception is never reached since always one trasform is guaranteed to be specified through the constructor 
 
@@ -151,7 +151,7 @@ class OptimizationProblem(object):
         #Otherwise - obtain the gradient numerically
         #Always construct the Hessian numerically
         if function_gradient is not None:
-            self.gradient = function_gradient
+            self.gradient = lambda x, _=None : function_gradient(x)
             """ The gradient of the objective function as a callable attribute """
             self.is_function_gradient = True;
         else:
@@ -188,29 +188,31 @@ class AbstractNewton(object):
         # if its hessian is positive definite
         
         f        = self.opt_problem.objective_function
+        f_x      = f(x)
         f_grad   = self.opt_problem.gradient
-        f_grad_x = self.opt_problem.gradient(x)
-        f_x      = self.opt_problem.objective_function(x)
+        f_grad_x = f_grad(x)
         G = self.opt_problem.hessian(x)
         H = inv(G)
-        for it in xrange(50):
+        for it in xrange(50*x.size):
             if debug:
                 self.xs.append(x)
 
-            if norm(f_grad_x) < 1e-4:
+            if norm(f_grad_x) < 1e-5:
                 break
         
             direction = self.find_direction(f_grad_x, H, G)
             #assert dot(-direction, f_grad_x) < 0:
             alpha = self.find_step_size(
                 f=lambda alpha: f(x - alpha*direction),
-                f_grad=lambda alpha: dot(f_grad(x - alpha*direction), -direction))
+                f_grad=lambda alpha, f_x=None:
+                    dot(f_grad(x - alpha*direction, f_x), -direction))
             
             delta = -alpha*direction
             H, G = self.update_hessian(x, delta, H, G) 
             #print "H: ", H
             #print "G: ", G
             x = x + delta
+            f_x = f(x)
             f_grad_x = f_grad(x)
 
         else:
@@ -313,7 +315,7 @@ class NewtonInexactLine(NewtonExactLine):
 
     def find_step_size(self, f, f_grad):
         f_0 = f(0)
-        f_grad_0 = f_grad(0)
+        f_grad_0 = f_grad(0, f_0)
         grad_norm = norm(f_grad_0)
 
         # Calculate maximum alpha where we would always reject it
@@ -347,7 +349,7 @@ class NewtonInexactLine(NewtonExactLine):
                 break
 
             # check condition 2
-            f_grad_alpha = f_grad(alpha)
+            f_grad_alpha = f_grad(alpha, f_alpha)
             if norm(f_grad_alpha) <= -self.sigma*f_grad_0:
                 return alpha
 
@@ -366,9 +368,11 @@ class NewtonInexactLine(NewtonExactLine):
                 _alpha = alpha
                 left = 2*alpha - alpha_prev
                 right = min(mu, alpha+self.tau1*(alpha-alpha_prev))
+                fl = f(left)
+                fr = f(right)
                 alpha = cubic_minimize(
-                    f(left), f_grad(left),
-                    f(right), f_grad(right),
+                    fl, f_grad(left, fl),
+                    fr, f_grad(right, fr),
                     left, right)
                 alpha_prev = _alpha
         else:
@@ -379,7 +383,7 @@ class NewtonInexactLine(NewtonExactLine):
         # check conditions in book (and that the cached values are correct)
         assert f_a == f(a)
         assert f_a <= f_0 + a*self.rho*f_grad_0
-        assert f_grad_a == f_grad(a)
+        assert f_grad_a == f_grad(a, f_a)
         assert (b-a)*f_grad_a<0
         assert f_b == f(b)
         assert f_b > f_0 + b*self.rho*f_grad_0 or f_b >= f_a
@@ -389,9 +393,11 @@ class NewtonInexactLine(NewtonExactLine):
             right = b - self.tau3*(b - a)
             # don't interpolate if too small
             if abs(left-right) > 1e-5:
+                fl = f(left)
+                fr = f(right)
                 alpha = cubic_minimize(
-                    f(left), f_grad(left),
-                    f(right), f_grad(right),
+                    fl, f_grad(left, fl),
+                    fr, f_grad(right, fr ),
                     left, right)
             else:
                 alpha = (left + right)*0.5
@@ -541,12 +547,6 @@ def cubic_minimize(fa, fpa, fb, fpb, a, b):
     values = poly(points)
     return points[argmin(values)]*(b-a)+a
 
-# Test functions
-def rosenbrock(x):
-    return 100*(x[1]-x[0]**2)**2+(1-x[0])**2
-def rosenbrock_grad(x):
-    return array([-200*(x[1]-x[0]) -2*(1-x[0]),
-                    200*(x[1]-x[0]) ])
 def F(x):
     return x[0]**2 + x[0]*x[1] + x[1]**2
 def F_grad(x):
@@ -556,17 +556,18 @@ def main():
 
     def f(x):
         return (x[0]+1)**2 + (x[1]-1)**2
-    guess = array([-0.9,1.0])
+    guess = array([-1.,-1])
 
     from chebyquad import chebyquad, gradchebyquad
-    op = OptimizationProblem(rosenbrock)
+    from scipy.optimize import rosen, rosen_der, rosen_hess
+
+    op = OptimizationProblem(rosen)
 #    guess = linspace(0, 8, 8)
+    
+    #print cn.optimize(guess)
     #cn  = ClassicNewton(op)
     #print "\nClassicNewton.Optimize(...): \n"
-    #print cn.optimize(guess)
-    cn  = QuasiNewtonBFSG(op)
-    print "\nBFSG.Optimize(...): \n"
-    print cn.optimize(guess, True)
+    #print cn.optimize(guess, True)
     #cn = NewtonInexactLine(op);
     #print "\nNewtonInexact.Optimize(...): \n"
     #print cn.optimize(guess)
@@ -576,9 +577,9 @@ def main():
     #cn = QuasiNewtonBFSG(op)
     #print "\nQuasiNewtonBFSG.Optimize(...): \n"
     #print cn.optimize(guess, True)
-    #cn = QuasiNewtonDFP(op)
-    #print "\nQuasiNewtonDFP.Optimize(...): \n"
-    #print cn.optimize(guess, True)
+    cn = QuasiNewtonDFP(op)
+    print "\nQuasiNewtonDFP.Optimize(...): \n"
+    print cn.optimize(guess, True)
     #return 
     #cn = QuasiNewtonBroydenBad(op);
     #print "\nQuasiNewtonBroydenBad.Optimize(...): \n"
