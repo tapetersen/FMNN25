@@ -161,21 +161,29 @@ def test_minimize():
     near = lambda a, b: abs(a-b) < 1e-3
 
     # basic minimum
-    assert near(.5, p.cubic_minimize(1., -1, 1, 1, 0, 1))
+    assert near(.5, p.cubic_minimize(1., -1, 1, 1, 0, 1, 0, 1))
+
+    # basic minimum outside range
+    assert near(.6, p.cubic_minimize(1., -1, 1, 1, 0, 1, 0.6, 1))
 
     # scaling and translation of interval
-    assert near(1, p.cubic_minimize(1., -1, 1, 1, 0, 2))
-    assert near(2, p.cubic_minimize(1., -1, 1, 1, 1, 3))
+    assert near(1, p.cubic_minimize(1., -1, 1, 1, 0, 2, 0, 2))
+    assert near(2, p.cubic_minimize(1., -1, 1, 1, 1, 3, 0, 2))
 
     # endpoints for concave function
-    assert near(0, p.cubic_minimize(1.0, 1, 1.1, -1, 0, 1))
-    assert near(1, p.cubic_minimize(1.1, 1, 1.0, -1, 0, 1))
+    assert near(0.1, p.cubic_minimize(1.0, 1, 1.1, -1, 0, 1, 0.1, 0.9))
+    assert near(0.9, p.cubic_minimize(1.1, 1, 1.0, -1, 0, 1, 0.1, 0.9))
 
     # non trivial minimum
-    assert near(1/3, p.cubic_minimize(1., -1, 1, 0, 0, 1))
+    assert near(1/3, p.cubic_minimize(1., -1, 1, 0, 0, 1, 0, 1))
+    assert near(2/3, p.cubic_minimize(1., 0, 1, 1, 0, 1, 0, 1))
+
+    # turned around
+    assert near(1/3, p.cubic_minimize(1., 0, 1, -1, 1, 0, 0, 1))
+    assert near(2/3, p.cubic_minimize(1., 1, 1, 0, 1, 0, 0, 1))
 
     #scaled
-    assert near((1/3)*2+3, p.cubic_minimize(1., -1, 1, 0, 3, 5))
+    assert near((1/3)*2+3, p.cubic_minimize(1., -1, 1, 0, 3, 5, 3, 5))
     
 
 def test_linesearch():

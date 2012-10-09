@@ -218,7 +218,7 @@ class AbstractNewton(object):
             f_grad_x = f_grad(x)
 
         else:
-            print "Failed to converge in %d iterations" % (50*x.size)
+            print "Failed to converge in 50 iterations"
 
         if debug:
             self.xs = array(self.xs)
@@ -270,25 +270,23 @@ class ClassicNewton(AbstractNewton):
     """
     
     def __init__(self, opt_problem):
-        """ Requires an optimization problem"""
+        """ Requires and optimization problem"""
         super(ClassicNewton, self).__init__(opt_problem)
         
 
     def find_step_size(self, f, f_grad):
-        """ Returns a stepsize of 1"""
         return 1
 
     def find_direction(self, f_grad_x, H, G):
-        """ Basic newton iteration by solving hessian^-1*gradient"""
         try:
             factored = lg.cho_factor(G)
             return lg.cho_solve(factored, f_grad_x)
         except LinAlgError:
+            return lg.solve(G, f_grad_x)
             raise LinAlgError(
                 "Hessian not positive definite, converging to saddle point")
-                
+
     def update_hessian(self, x, delta, H, G):
-        """ Updates hessian for new point """
         return (None, self.opt_problem.hessian(x + delta))
 
         
@@ -299,7 +297,6 @@ class NewtonExactLine(ClassicNewton):
         super(NewtonExactLine, self).__init__(opt_problem)
         
     def find_step_size(self, f, f_grad):
-        """ Finds the optimum stepsize using fminbound"""
         return opt.fminbound(f, 0, 1000)
 
 
@@ -312,7 +309,6 @@ class NewtonInexactLine(NewtonExactLine):
         super(NewtonInexactLine, self).__init__(*args, **kwargs)
         
     def find_step_size(self, f, f_grad):
-        """ Uses line search to find a good step size """
         return find_step_size(f, f_grad, self.opt_problem.min_bound)
 
 
@@ -324,7 +320,6 @@ class QuasiNewtonDFP(NewtonInexactLine):
         super(QuasiNewtonDFP, self).__init__(*args, **kwargs)
         
     def update_hessian(self, x, delta, H, G):
-        """ Updates an approximation of the inverse of the hessian """
         f_grad = self.opt_problem.gradient
         gamma = f_grad(x+delta) - f_grad(x)
         d_dot_g = dot(delta, gamma)
@@ -335,7 +330,6 @@ class QuasiNewtonDFP(NewtonInexactLine):
         return H, None
 
     def find_direction(self, f_grad_x, H, G):
-        """ Uses the approximated inverse to solve for the newton direction """
         return dot(H, f_grad_x)
 
 class QuasiNewtonBFSG(NewtonInexactLine):    
@@ -345,7 +339,6 @@ class QuasiNewtonBFSG(NewtonInexactLine):
         super(QuasiNewtonBFSG, self).__init__(*args, **kwargs)
         
     def update_hessian(self, x, delta, H, G):
-        """ Updates an approximation of the inverse of the hessian """
         f_grad = self.opt_problem.gradient
         gamma = f_grad(x+delta) - f_grad(x)
         d_dot_g = dot(delta, gamma)
@@ -359,7 +352,6 @@ class QuasiNewtonBFSG(NewtonInexactLine):
         return H, None
 
     def find_direction(self, f_grad_x, H, G):
-        """ Uses the approximated inverse to solve for the newton direction """
         return dot(H, f_grad_x)
 
 class QuasiNewtonBroyden(NewtonInexactLine):    
@@ -368,18 +360,22 @@ class QuasiNewtonBroyden(NewtonInexactLine):
         super(QuasiNewtonBroyden, self).__init__(*args, **kwargs)
         
     def update_hessian(self, x, delta, H, G):
-        """ Updates an approximation of the inverse of the hessian """
         #print str(norm(inv(self.opt_problem.hessian(x))-H, 'fro'))
         f_grad = self.opt_problem.gradient
         gamma = f_grad(x+delta) - f_grad(x)
         u = delta - dot(H, gamma)
         a = 1/dot(u, gamma)
-        H = H + dot(outer(delta - dot(H, gamma), delta), H) / \
-                dot(delta, dot(H, gamma))
+
+        # Both of these will succeed on rosen but do some strange errors on the
+        # definition in lecture notes
+        H = H + outer(u, u)*a
+
+        # wikipedias
+        #H = H + dot(outer(delta - dot(H, gamma), delta), H) / \
+                #dot(delta, dot(H, gamma))
         return H, None
 
     def find_direction(self, f_grad_x, H, G):
-        """ Uses the approximated inverse to solve for the newton direction """
         return dot(H, f_grad_x)
 
 class QuasiNewtonBroydenBad(QuasiNewtonBroyden):    
@@ -388,7 +384,6 @@ class QuasiNewtonBroydenBad(QuasiNewtonBroyden):
         super(QuasiNewtonBroydenBad, self).__init__(*args, **kwargs)
         
     def update_hessian(self, x, delta, H, G):
-        """ Updates an approximation of the inverse of the hessian """
         f_grad = self.opt_problem.gradient
         gamma = f_grad(x+delta) - f_grad(x)
         u = delta-dot(H, gamma)
@@ -397,8 +392,7 @@ class QuasiNewtonBroydenBad(QuasiNewtonBroyden):
         return H, None
 
 def find_step_size(f, f_grad, min_bound=0.0, debug=False):
-    """ Finds a good candidate for the stepsize using the algorithm
-    described in Fletcher """
+
     rho = 1e-3
     sigma = 0.1
     tau1 = 9
@@ -409,14 +403,19 @@ def find_step_size(f, f_grad, min_bound=0.0, debug=False):
     f_grad_0 = f_grad(0, f_0)
     grad_norm = norm(f_grad_0)
 
+    if f_grad_0 > 0:
+        print "Warning grad positive in direction, linesearch will return 1"
+        return 1.0
+
     # Calculate maximum alpha where we would always reject it
     # due to the Armijo rule (condition i)
     mu = (min_bound - f_0)/(rho*f_grad_0)
 
     # bracketing face, first algorithm part in book
 
-    #alpha = min(.1, mu*.01)
-    alpha = min(1., mu*.01)
+
+    # start values, alpha0 = 0 and alpha1=1 
+    alpha = 1.0
     alpha_prev = 0.
 
     f_alpha = f_0
@@ -475,12 +474,10 @@ def find_step_size(f, f_grad, min_bound=0.0, debug=False):
             _alpha = alpha
             left = 2*alpha - alpha_prev
             right = min(mu, alpha+tau1*(alpha-alpha_prev))
-            fl = f(left)
-            fr = f(right)
             alpha = cubic_minimize(
-                fl, f_grad(left, fl),
-                fr, f_grad(right, fr),
-                left, right)
+                f_alpha, f_grad_alpha,
+                f_prev_alpha, f_grad_prev_alpha,
+                alpha, alpha_prev, left, right)
             if debug:
                 print "minimizing on interval [%f, %f]" % (left, right)
             alpha_prev = _alpha
@@ -500,16 +497,10 @@ def find_step_size(f, f_grad, min_bound=0.0, debug=False):
     for it in range(50):
         left = a + tau2*(b - a)
         right = b - tau3*(b - a)
-        # don't interpolate if too small
-        if abs(left-right) > 1e-5:
-            fl = f(left)
-            fr = f(right)
-            alpha = cubic_minimize(
-                fl, f_grad(left, fl),
-                fr, f_grad(right, fr ),
-                left, right)
+        if abs(left-right) < 1e-5:
+            alpha = (left+right)*.5
         else:
-            alpha = (left + right)*0.5
+            alpha = quadratic_minimize(f_a, f_grad_a, f_b, a, b, left, right)
 
         # check if alpha satisfies condition 1. If not we need a smaller
         # value choose [a, alpha]
@@ -518,6 +509,7 @@ def find_step_size(f, f_grad, min_bound=0.0, debug=False):
                 f_alpha >= f_a):
             #a = a
             b = alpha
+            f_b = f_alpha
         else:
             # alpha satisfies condition 1 check condition 2 and if true
             # return that alpha, otherwise we're too close,
@@ -526,10 +518,12 @@ def find_step_size(f, f_grad, min_bound=0.0, debug=False):
             if norm(f_grad_alpha) <= -sigma*f_grad_0:
                 return alpha
 
-            # changing order with respect to Fletcher to avoid saving a
+            # changing order with respect to Fletcher to avoid saving a.
             if (b - a)*f_grad_alpha >= 0:
                 b = a
             a = alpha
+            f_a = f_alpha
+            f_grad_a = f_grad_alpha
             # else:
                 #b = b
     else:
@@ -538,10 +532,44 @@ def find_step_size(f, f_grad, min_bound=0.0, debug=False):
         return 1.0
 
             
-def cubic_minimize(fa, fpa, fb, fpb, a, b):
+def quadratic_minimize(fa, fpa, fb, a, b, left, right):
     """
-    Fits a cubic polynomial to the points and derivatives and returns it's
-    minimum in the interval
+    Fits a quadratic polynomial to the points (a, fa), (b, fb) and derivative
+    f'(a) = fpa and returns it's minimum in [left, right]
+    """
+
+    # Transform to [0, 1] (derivatives change)
+    fpa = fpa*(b-a)
+
+    poly = poly1d([fb - fpa - fa, fpa, fa])
+
+    # find inflection points
+    extreme = None
+    if poly.order == 2:
+        if poly[2] > 0:
+            extreme = -poly[1]/(2*poly[2])
+
+    _right = (right-a)/(b-a)
+    _left = (left-a)/(b-a)
+    if _right < _left:
+        _right, _left = _left, _right
+    if (extreme is not None and 
+            extreme < _right and
+            extreme > _left ):
+        points = array([_left, extreme, _right])
+    else:
+        points = array([_left, _right])
+
+    values = poly(points)
+    alpha = points[argmin(values)]*(b-a)+a
+    assert ((left<=alpha and alpha <= right) or
+            (left>=alpha and alpha >= right))
+    return alpha
+
+def cubic_minimize(fa, fpa, fb, fpb, a, b, left, right):
+    """
+    Fits a qubic polynomial to the points (a, fa), (b, fb) and derivatives
+    f'(a) = fpa, f'(b) = fpb and returns it's minimum in [left, right]
     """
 
     # Transform to [0, 1] (derivatives change)
@@ -555,33 +583,37 @@ def cubic_minimize(fa, fpa, fb, fpb, a, b):
     poly = poly1d([xsi, eta, fpa, fa])
 
     # find inflection points
+    extreme = None
     if poly.order == 3:
         der = poly.deriv()
-        if der[2]:
-            der = der/der[2]
-            disc = (der[1]*der[1]/4 - der[0])
+        if der.order == 2:
+            disc = (der[1]*der[1]/(4*der[2]*der[2]) - der[0]/der[2])
             if disc > 0:
-                points = asarray(
-                    [0.0 ,-der[1]/2+sqrt(disc), -der[1]/2-sqrt(disc), 1.0])
-                points = points[np.logical_and(points >= 0, points <= 1)]
-            else:
-                # can't have minimums
-                points = asarray([0.0, 1.0])
-        else:
-            # can't have minimums
-            points = asarray([0.0, 1.0])
-    elif poly.order == 2:
-        extreme = -poly[1]/(2*poly[2])
-        if extreme < 1 and extreme > 0:
-            points = asarray([0., extreme, 1.])
-        else:
-            points = asarray([0.0, 1.0])
+                if poly[3] > 0:
+                    extreme = -der[1]/(2*der[2])+sqrt(disc)
+                else: 
+                    extreme = -der[1]/(2*der[2])-sqrt(disc)
 
+    elif poly.order == 2 and poly[2] > 0:
+        extreme = -poly[1]/(2*poly[2])
+
+    _right = (right-a)/(b-a)
+    _left = (left-a)/(b-a)
+    if _right < _left:
+        _right, _left = _left, _right
+    if (extreme is not None and 
+            extreme < _right and
+            extreme > _left ):
+        points = array([_left, extreme, _right])
     else:
-        points = asarray([0.0, 1.0])
+        points = array([_left, _right])
 
     values = poly(points)
-    return points[argmin(values)]*(b-a)+a
+    alpha = points[argmin(values)]*(b-a)+a
+    assert ((left<=alpha and alpha <= right) or
+            (left>=alpha and alpha >= right))
+
+    return alpha
 
 def F(x):
     return x[0]**2 + x[0]*x[1] + x[1]**2
@@ -606,20 +638,19 @@ def main():
     #print cn.optimize(guess, True)
     #cn = NewtonInexactLine(op);
     #print "\nNewtonInexact.Optimize(...): \n"
-    #print cn.optimize(guess)
+    #print cn.optimize(guess, True)
     #cn = QuasiNewtonBroyden(op);
     #print "\nQuasiNewtonBroyden.Optimize(...): \n"
     #print cn.optimize(guess, True)
     #cn = QuasiNewtonBFSG(op)
     #print "\nQuasiNewtonBFSG.Optimize(...): \n"
     #print cn.optimize(guess, True)
-    cn = QuasiNewtonDFP(op)
-    print "\nQuasiNewtonDFP.Optimize(...): \n"
-    print cn.optimize(guess, True)
-    #return 
-    #cn = QuasiNewtonBroydenBad(op);
-    #print "\nQuasiNewtonBroydenBad.Optimize(...): \n"
+    #cn = QuasiNewtonDFP(op)
+    #print "\nQuasiNewtonDFP.Optimize(...): \n"
     #print cn.optimize(guess, True)
+    cn = QuasiNewtonBroydenBad(op);
+    print "\nQuasiNewtonBroydenBad.Optimize(...): \n"
+    print cn.optimize(guess, True)
 
 
 if __name__ == '__main__':
