@@ -47,17 +47,22 @@ class FunctionTransforms(object):
         self.f    = function
 
 
-    def gradient(self, x):
+    def gradient(self, x, fx=None):
         """ Approximates the gradient using (central) finite differences 
         of degree 1, or forwards if fx is supplied
         """
         x = asarray(x)
         grad = zeros(x.size)
         h    = 1e-5 
+        step  = zeros(x.size)
         for i in range(x.size):
-            step    = zeros(x.size)
             step[i] = h
-            grad[i] = (self.f(x+step) - self.f(x-step))/(2.*h)
+            if fx is None:
+                grad[i] = (self.f(x+step) - self.f(x-step))/(2.*h)
+            else:
+                grad[i] = (self.f(x+step) - fx)/h
+
+            step[i] = 0.0
 
         return grad
 
@@ -204,11 +209,11 @@ class ClassicNewton(OptimizationMethod):
         f_x      = self.opt_problem.objective_function(x)
         G = self.opt_problem.hessian(x)
         H = inv(G)
-        for ii in xrange(50):
+        for it in xrange(50):
             if debug:
                 self.xs.append(x)
 
-            if norm(f_grad_x) < 1e-4 :
+            if norm(f_grad_x) < 1e-4:
                 break
         
             direction = self.find_direction(f_grad_x, H, G)
@@ -224,9 +229,15 @@ class ClassicNewton(OptimizationMethod):
             x = x + delta
             f_grad_x = f_grad(x)
 
+        else:
+            print "Failed to converge in 50 iterations"
+
         if debug:
             self.xs = array(self.xs)
-            print self.xs
+            print "xs : ", self.xs
+            print "Iterations: ", it
+            print "x : ", x
+            print "f(x): ", f(x)
             if x.size == 2:
                 self.plot()
 
@@ -563,9 +574,9 @@ def main():
     #print "\nQuasiNewtonDFP.Optimize(...): \n"
     #print cn.optimize(guess, True)
     #return 
-    cn = QuasiNewtonBroydenBad(op);
-    print "\nQuasiNewtonBroydenBad.Optimize(...): \n"
-    print cn.optimize(guess, True)
+    #cn = QuasiNewtonBroydenBad(op);
+    #print "\nQuasiNewtonBroydenBad.Optimize(...): \n"
+    #print cn.optimize(guess, True)
 
 
 if __name__ == '__main__':
