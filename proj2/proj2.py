@@ -522,11 +522,11 @@ def main():
 
     def f(x):
         return (x[0]+1)**2 + (x[1]-1)**2
-    guess = array([-1.0,1.0])
+    guess = array([-0.9,1.0])
 
     from chebyquad import chebyquad, gradchebyquad
-    op = OptimizationProblem(chebyquad)
-    guess = linspace(0, 8, 8)
+    op = OptimizationProblem(rosenbrock)
+#    guess = linspace(0, 8, 8)
     #cn  = ClassicNewton(op)
     #print "\nClassicNewton.Optimize(...): \n"
     #print cn.optimize(guess)
