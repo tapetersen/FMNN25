@@ -20,15 +20,18 @@ Help classes and methods
    .. automethod:: proj2.OptimizationProblem.__call__
    
 .. autofunction:: proj2.cubic_minimize
-
+.. autofunction:: proj2.find_step_size
 
 
 Solvers
 -------------
 
 
-.. autoclass:: proj2.OptimizationMethod
+.. autoclass:: proj2.AbstractNewton
    :members:
+   :undoc-members:
+   
+   .. automethod:: proj2.AbstractNewton.__init__
    
 Newton solvers
 ~~~~~~~~~~~~~~~
@@ -40,7 +43,6 @@ Newton solvers
    
 .. autoclass:: proj2.NewtonInexactLine
    :members:
-   :undoc-members:
 
 
 

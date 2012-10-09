@@ -4,7 +4,7 @@
 #  
 
 from  __future__  import division
-from  scipy       import *
+from  scipy       import linspace, array
 from  scipy import linalg as lg
 from  matplotlib.pyplot import *
 import scipy.optimize as so
@@ -41,115 +41,117 @@ def test_hessian():
             assert all( abs(kkk) <1e-2 )
 
 
-near = lambda x,y: sum(abs(x-y) < 1e-4) == x.size
-def rosenbrock(x):
-    return 100*(x[1]-x[0]**2)**2+(1-x[0])**2
+near = lambda x,y: abs(c.chebyquad(x)-c.chebyquad(y)) < 1e-8
+""" Helper method for solver tests"""
     
-sol4 = sort(so.fmin_bfgs(c.chebyquad,linspace(0,1,4),c.gradchebyquad))
-sol8 = sort(so.fmin_bfgs(c.chebyquad,linspace(0,1,8),c.gradchebyquad))
+sol4 = (so.fmin_bfgs(c.chebyquad,linspace(0,1,4),c.gradchebyquad))
+sol8 = (so.fmin_bfgs(c.chebyquad,linspace(0,1,8),c.gradchebyquad))
 solr = array([1.,1.])
 
 def test_classic_newton():
     op = p.OptimizationProblem(c.chebyquad)
     guess=linspace(0,1,4)
     cn  = p.ClassicNewton(op)
-    assert near(sol4,sort(cn.optimize(guess)))
+    assert near(sol4,(cn.optimize(guess)))
     guess=linspace(0,1,8)
-    #assert near(sol8,sort(cn.optimize(guess)))
+    assert near(sol8,(cn.optimize(guess)))
     
     op = p.OptimizationProblem(rosenbrock)
     cn  = p.ClassicNewton(op)
     guess = array([-1.,-1.])
     sol = array([1.,1.])
-    assert near(solr,sort(cn.optimize(guess)))
+    assert all(abs(solr-(cn.optimize(guess))) < 1e-4)
     
 def test_newton_exact_line_search():
     op = p.OptimizationProblem(c.chebyquad)
     guess=linspace(0,1,4)
     cn  = p.NewtonExactLine(op)
-    assert near(sol4,sort(cn.optimize(guess)))
+    assert near(sol4,(cn.optimize(guess)))
     guess=linspace(0,1,8)
-    #assert near(sol8,sort(cn.optimize(guess)))
+    assert near(sol8,(cn.optimize(guess)))
     
     op = p.OptimizationProblem(rosenbrock)
     cn  = p.NewtonExactLine(op)
     guess = array([-1.,-1.])
     sol = array([1.,1.])
-    assert near(solr,sort(cn.optimize(guess)))
+    assert all(abs(solr-(cn.optimize(guess))) < 1e-4)
     
 def test_newton_inexact_line_search():
     op = p.OptimizationProblem(c.chebyquad)
     guess=linspace(0,1,4)
     cn  = p.NewtonInexactLine(op)
-    assert near(sol4,sort(cn.optimize(guess)))
+    assert near(sol4,(cn.optimize(guess)))
     guess=linspace(0,1,8)
-    #assert near(sol8,sort(cn.optimize(guess)))
+    assert near(sol8,(cn.optimize(guess)))
     op = p.OptimizationProblem(rosenbrock)
     cn  = p.NewtonInexactLine(op)
     guess = array([-1.,-1.])
     sol = array([1.,1.])
-    assert near(solr,sort(cn.optimize(guess)))
+    assert all(abs(solr-(cn.optimize(guess))) < 1e-4)
 
 def test_quasi_newton_broyden():
     op = p.OptimizationProblem(c.chebyquad)
     guess=linspace(0,1,4)
     cn  = p.QuasiNewtonBroyden(op)
-    assert near(sol4,sort(cn.optimize(guess)))
+    assert near(sol4,(cn.optimize(guess)))
     guess=linspace(0,1,8)
-    #assert near(sol8,sort(cn.optimize(guess)))
+    assert near(sol8,(cn.optimize(guess)))
     
     op = p.OptimizationProblem(rosenbrock)
     cn  = p.QuasiNewtonBroyden(op)
     guess = array([-1.,-1.])
     sol = array([1.,1.])
-    assert near(solr,sort(cn.optimize(guess)))
+    assert all(abs(solr-(cn.optimize(guess))) < 1e-4)
     
 def test_quasi_newton_broyden_bad():
     op = p.OptimizationProblem(c.chebyquad)
     guess=linspace(0,1,4)
     cn  = p.QuasiNewtonBroydenBad(op)
-    assert near(sol4,sort(cn.optimize(guess)))
+    assert near(sol4,(cn.optimize(guess)))
     
     guess=linspace(0,1,8)
     
-    #assert near(sol8,sort(cn.optimize(guess)))
+    assert near(sol8,(cn.optimize(guess)))
     
     op = p.OptimizationProblem(rosenbrock)
     cn  = p.QuasiNewtonBroydenBad(op)
     guess = array([-1.,-1.])
     sol = array([1.,1.])
-    assert near(solr,sort(cn.optimize(guess)))
+    assert all(abs(solr-(cn.optimize(guess))) < 1e-4)
     
 def test_quasi_newton_BFSG():
     op = p.OptimizationProblem(c.chebyquad)
     guess=linspace(0,1,4)
     cn  = p.QuasiNewtonBFSG(op)
-    assert near(sol4,sort(cn.optimize(guess)))
+    assert near(sol4,(cn.optimize(guess)))
     
     guess=linspace(0,1,8)
-    #assert near(sol8,sort(cn.optimize(guess)))
+    k = (cn.optimize(guess))
+    print k, sol8, norm(k - sol8), op.objective_function(k),op.objective_function(sol8)
+    assert near(sol8,k)
     
     op = p.OptimizationProblem(rosenbrock)
     cn  = p.QuasiNewtonBFSG(op)
     guess = array([-1.,-1.])
     sol = array([1.,1.])
-    assert near(solr,sort(cn.optimize(guess)))
+    assert all(abs(solr-(cn.optimize(guess))) < 1e-4)
     
 def test_quasi_newton_DFP():
     op = p.OptimizationProblem(c.chebyquad)
     guess=linspace(0,1,4)
     cn  = p.QuasiNewtonDFP(op)
-    assert near(sol4,sort(cn.optimize(guess)))
+    assert near(sol4,(cn.optimize(guess)))
     
     guess=linspace(0,1,8)
-    
-    #assert near(sol8,sort(cn.optimize(guess)))
+    k = (cn.optimize(guess))
+    print norm(k - sol8)
+    assert near(sol8,k)
     
     op = p.OptimizationProblem(rosenbrock)
     cn  = p.QuasiNewtonDFP(op)
     guess = array([-1.,-1.])
     sol = array([1.,1.])
-    assert near(solr,sort(cn.optimize(guess)))
+    assert all(abs(solr-(cn.optimize(guess))) < 1e-4)
 
     
 

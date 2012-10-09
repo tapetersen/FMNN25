@@ -16,6 +16,7 @@ Contents:
    overview
    code
    tests
+   results
 
 
 Indices and tables

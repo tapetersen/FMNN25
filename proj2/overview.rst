@@ -20,4 +20,4 @@ The solvers are written using inheritance where the Classic Newton method provid
 
 Testing
 --------
-Tests include testing of gradient and hessian computation, the minimization function and solvers. 
+Tests include testing of gradient and hessian computation, the minimization function, solvers and linesearch. The tests for the solvers are considered successfull if the solver terminates and the function value of the obtained solution is very close to the function value of the obtained solution for scipy:s optimization method. 
