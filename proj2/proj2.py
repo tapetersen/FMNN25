@@ -167,7 +167,7 @@ class OptimizationProblem(object):
         return self.objective_function(x)
 
 
-class OptimizationMethod(object):
+class AbstractNewton(object):
     """
     Super class for various optimization methods
 
@@ -177,22 +177,6 @@ class OptimizationMethod(object):
     def __init__(self, opt_problem):
         self.opt_problem = opt_problem
         """ The optimization problem to be minimized"""
-         
-    def optimize(self):
-        """ Default empty implementation"""
-        pass
-
-class ClassicNewton(OptimizationMethod):
-    """
-    A classic newton solver. Can get stuck in local minima, extends from
-    OptimizationMethod. 
-    Also acts as a superclass for 
-    """
-    
-    def __init__(self, opt_problem):
-        """ Requires and optimization problem"""
-        super(ClassicNewton, self).__init__(opt_problem)
-        
 
     def optimize(self, guess, debug=False):
         
@@ -244,18 +228,13 @@ class ClassicNewton(OptimizationMethod):
         return x
 
     def find_step_size(self, f, f_grad):
-        return 1
+        pass
 
     def find_direction(self, f_grad_x, H, G):
-        try:
-            factored = lg.cho_factor(G)
-            return lg.cho_solve(factored, f_grad_x)
-        except LinAlgError:
-            raise LinAlgError(
-                "Hessian not positive definite, converging to saddle point")
+        pass
 
     def update_hessian(self, x, delta, H, G):
-        return (None, self.opt_problem.hessian(x + delta))
+        pass
 
     def plot(self):
         # find min/max of points
@@ -277,6 +256,33 @@ class ClassicNewton(OptimizationMethod):
 
         plot(self.xs[:,0], self.xs[:,1], '+-', color='black')
         show()
+         
+
+class ClassicNewton(AbstractNewton):
+    """
+    A classic newton solver. Can get stuck in local minima, extends from
+    OptimizationMethod. 
+    Also acts as a superclass for 
+    """
+    
+    def __init__(self, opt_problem):
+        """ Requires and optimization problem"""
+        super(ClassicNewton, self).__init__(opt_problem)
+        
+
+    def find_step_size(self, f, f_grad):
+        return 1
+
+    def find_direction(self, f_grad_x, H, G):
+        try:
+            factored = lg.cho_factor(G)
+            return lg.cho_solve(factored, f_grad_x)
+        except LinAlgError:
+            raise LinAlgError(
+                "Hessian not positive definite, converging to saddle point")
+
+    def update_hessian(self, x, delta, H, G):
+        return (None, self.opt_problem.hessian(x + delta))
 
         
 class NewtonExactLine(ClassicNewton):
@@ -289,7 +295,7 @@ class NewtonExactLine(ClassicNewton):
         return opt.fminbound(f, 0, 1000)
 
 
-class NewtonInexactLine(ClassicNewton):    
+class NewtonInexactLine(NewtonExactLine):    
     """
     Newton method with inexact line search as given in Fletcher
     """
