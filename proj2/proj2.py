@@ -16,7 +16,7 @@ from collections import defaultdict
 import chebyquad as cqp
 
 class FunctionTransforms(object):
-    """ A class which provides a transform of a given function. 
+    """ A class that provides a transform of a given function. 
     Provided transforms: 
         - gradient
         - hessian
@@ -30,13 +30,13 @@ class FunctionTransforms(object):
     def __init__(self, function, 
                  gradient = False, hessian = False):
         """
-        The constructor receives information abut what kind of transform is needed
+        The constructor receives information about what kind of transform is needed
         for the moment - only one transform can be specified.
 
         Exceptions:
             - If no transforms are specified the class asks the user for one
             - If two transforms are specfied the class asks for only one to be specified,
-            the transform can only be uniquely specified.
+              the transform can only be uniquely specified.
         """
         if not (gradient or hessian):
             raise Exception("you must specify a transform")
@@ -48,6 +48,9 @@ class FunctionTransforms(object):
 
 
     def gradient(self, x):
+        """ Approximates the gradient using (central) finite differences 
+        of degree 1, or forwards if fx is supplied
+        """
         x = asarray(x)
         grad = zeros(x.size)
         h    = 1e-5 
@@ -59,9 +62,7 @@ class FunctionTransforms(object):
         return grad
 
     def gradient2(self, x, fx=None):
-        """Approximates the gradient using (central) finite differences 
-        of degree 1, or forwards if fx is supplied
-        """
+        
         # force column vector
         x = asarray(x).reshape(-1, 1)
 
@@ -77,7 +78,8 @@ class FunctionTransforms(object):
 
 
     def hessian(self, x):
-        """ Approximates the hessian using (central) finite differences of degree 2
+        """ Approximates the hessian using (central) finite differences
+        and gradient computation. 
         A symmtrizing step: hessian = .5*(hessian + hessian^T) is
         also performed
         """
@@ -106,9 +108,10 @@ class FunctionTransforms(object):
 
     def __call__(self, x):
         """
-        Evaluation function that performs the transfrm specfied,
-        the constructuor ensures that the transform is uniquely determind at instaciation.
+        Returns the transform at point x for the transform specified when
+        creating an instance of the class.
         """
+        
         if self.grad:
             return self.gradient(x)
         if self.hess:
@@ -119,6 +122,7 @@ class FunctionTransforms(object):
 class OptimizationProblem(object):
     """ Provides an interface to various methods on a given function
     which can be used to optimize it. 
+    
     """
     
     def __init__(self, objective_function,
@@ -126,30 +130,34 @@ class OptimizationProblem(object):
         """The user provides a function, the functions dimension (\in R^n) and
         optionally its gradient (given as a callable function)
 
-        An atribute 'is_function_gradient' is added ss a boolean so that we can keep track
+        An atribute 'is_function_gradient' is added as a boolean so that we can keep track
         if we're working with a matrix or a function
         
+        An instance of this class provides three important attributes, 
+        objective_function, gradient and hessian, which are callable
+        functions. As a default the hessian and gradient is constructed
+        numerically. 
         """
         
         self.objective_function = objective_function
+        """ The objective function as a callable attribute """
         self.is_function_gradient = False;
-        """
-            A gradient is specfied by the user, use it.
-            Otherwise - obtain the gradient numerically
-
-            Always construct the Hessian numerically
-        """
+        #A gradient is specfied by the user, use it.
+        #Otherwise - obtain the gradient numerically
+        #Always construct the Hessian numerically
         if function_gradient is not None:
             self.gradient = function_gradient
+            """ The gradient of the objective function as a callable attribute """
             self.is_function_gradient = True;
         else:
             self.gradient = FunctionTransforms(objective_function, 
                                             gradient=True)
         self.hessian = FunctionTransforms(objective_function,  
                                             hessian=True)
+        """ The hessian of the objective function as a callable attribute """
     def __call__(self, x):
         """
-        Pass through for the objective function
+        Evaluates the objective function associated with this problem. 
         """
         return self.objective_function(x)
 
@@ -160,20 +168,29 @@ class OptimizationMethod(object):
 
     Please note - opt_problem inherits from the class Optimization problem
     """
+    
     def __init__(self, opt_problem):
         self.opt_problem = opt_problem
+        """ The optimization problem to be minimized"""
          
     def optimize(self):
+        """ Default empty implementation"""
         pass
 
 class ClassicNewton(OptimizationMethod):
-    
+    """
+    A classic newton solver. Can get stuck in local minima, extends from
+    OptimizationMethod. 
+    Also acts as a superclass for 
+    """
     
     def __init__(self, opt_problem):
+        """ Requires and optimization problem"""
         super(ClassicNewton, self).__init__(opt_problem)
         
 
     def optimize(self, guess, debug=False):
+        
         x = asarray(guess)
 
         if debug:
