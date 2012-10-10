@@ -20,6 +20,7 @@ Help classes and methods
    .. automethod:: proj2.OptimizationProblem.__call__
    
 .. autofunction:: proj2.cubic_minimize
+.. autofunction:: proj2.quadratic_minimize
 .. autofunction:: proj2.find_step_size
 
 
