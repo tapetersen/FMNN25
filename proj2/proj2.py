@@ -53,7 +53,7 @@ class FunctionTransforms(object):
         """
         x = asarray(x)
         grad = zeros(x.size)
-        h    = 1e-4
+        h    = 1e-5
         step  = zeros(x.size)
         for i in range(x.size):
             step[i] = h
@@ -90,7 +90,7 @@ class FunctionTransforms(object):
         """
         x = asarray(x)
         hess = zeros((x.size, x.size))
-        h    = 1e-4
+        h    = 1e-5
         # Approximates hessian using gradient, see 
         # http://v8doc.sas.com/sashtml/ormp/chap5/sect28.htm
         # TODO: We don't need to compute this many values since its
