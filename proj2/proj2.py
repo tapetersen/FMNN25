@@ -53,7 +53,7 @@ class FunctionTransforms(object):
         """
         x = asarray(x)
         grad = zeros(x.size)
-        h    = 1e-5 
+        h    = 1e-4
         step  = zeros(x.size)
         for i in range(x.size):
             step[i] = h
@@ -90,7 +90,7 @@ class FunctionTransforms(object):
         """
         x = asarray(x)
         hess = zeros((x.size, x.size))
-        h    = 1e-5
+        h    = 1e-4
         # Approximates hessian using gradient, see 
         # http://v8doc.sas.com/sashtml/ormp/chap5/sect28.htm
         # TODO: We don't need to compute this many values since its
@@ -218,7 +218,7 @@ class AbstractNewton(object):
             f_grad_x = f_grad(x)
 
         else:
-            print "Failed to converge in 50 iterations"
+            print "Failed to converge in %d iterations" % (50*x.size) 
 
         if debug:
             self.xs = array(self.xs)
@@ -270,14 +270,16 @@ class ClassicNewton(AbstractNewton):
     """
     
     def __init__(self, opt_problem):
-        """ Requires and optimization problem"""
+        """ Requires an optimization problem"""
         super(ClassicNewton, self).__init__(opt_problem)
         
 
     def find_step_size(self, f, f_grad):
+        """ Returns a stepsize of 1""" 
         return 1
 
     def find_direction(self, f_grad_x, H, G):
+        """ Basic newton iteration by solving hessian^-1*gradient""" 
         try:
             factored = lg.cho_factor(G)
             return lg.cho_solve(factored, f_grad_x)
@@ -287,6 +289,7 @@ class ClassicNewton(AbstractNewton):
                 "Hessian not positive definite, converging to saddle point")
 
     def update_hessian(self, x, delta, H, G):
+        """ Updates hessian for new point """ 
         return (None, self.opt_problem.hessian(x + delta))
 
         
@@ -297,6 +300,7 @@ class NewtonExactLine(ClassicNewton):
         super(NewtonExactLine, self).__init__(opt_problem)
         
     def find_step_size(self, f, f_grad):
+        """ Finds the optimum stepsize using fminbound"""
         return opt.fminbound(f, 0, 1000)
 
 
@@ -309,6 +313,7 @@ class NewtonInexactLine(NewtonExactLine):
         super(NewtonInexactLine, self).__init__(*args, **kwargs)
         
     def find_step_size(self, f, f_grad):
+        """ Uses line search to find a good step size """ 
         return find_step_size(f, f_grad, self.opt_problem.min_bound)
 
 
@@ -320,6 +325,7 @@ class QuasiNewtonDFP(NewtonInexactLine):
         super(QuasiNewtonDFP, self).__init__(*args, **kwargs)
         
     def update_hessian(self, x, delta, H, G):
+        """ Updates an approximation of the inverse of the hessian """ 
         f_grad = self.opt_problem.gradient
         gamma = f_grad(x+delta) - f_grad(x)
         d_dot_g = dot(delta, gamma)
@@ -330,6 +336,7 @@ class QuasiNewtonDFP(NewtonInexactLine):
         return H, None
 
     def find_direction(self, f_grad_x, H, G):
+        """ Uses the approximated inverse to solve for the newton direction """
         return dot(H, f_grad_x)
 
 class QuasiNewtonBFSG(NewtonInexactLine):    
@@ -339,6 +346,7 @@ class QuasiNewtonBFSG(NewtonInexactLine):
         super(QuasiNewtonBFSG, self).__init__(*args, **kwargs)
         
     def update_hessian(self, x, delta, H, G):
+        """ Updates an approximation of the inverse of the hessian """ 
         f_grad = self.opt_problem.gradient
         gamma = f_grad(x+delta) - f_grad(x)
         d_dot_g = dot(delta, gamma)
@@ -352,6 +360,7 @@ class QuasiNewtonBFSG(NewtonInexactLine):
         return H, None
 
     def find_direction(self, f_grad_x, H, G):
+        """ Uses the approximated inverse to solve for the newton direction """
         return dot(H, f_grad_x)
 
 class QuasiNewtonBroyden(NewtonInexactLine):    
@@ -360,6 +369,7 @@ class QuasiNewtonBroyden(NewtonInexactLine):
         super(QuasiNewtonBroyden, self).__init__(*args, **kwargs)
         
     def update_hessian(self, x, delta, H, G):
+        """ Updates an approximation of the inverse of the hessian """ 
         #print str(norm(inv(self.opt_problem.hessian(x))-H, 'fro'))
         f_grad = self.opt_problem.gradient
         gamma = f_grad(x+delta) - f_grad(x)
@@ -376,6 +386,7 @@ class QuasiNewtonBroyden(NewtonInexactLine):
         return H, None
 
     def find_direction(self, f_grad_x, H, G):
+        """ Uses the approximated inverse to solve for the newton direction """ 
         return dot(H, f_grad_x)
 
 class QuasiNewtonBroydenBad(QuasiNewtonBroyden):    
@@ -384,6 +395,7 @@ class QuasiNewtonBroydenBad(QuasiNewtonBroyden):
         super(QuasiNewtonBroydenBad, self).__init__(*args, **kwargs)
         
     def update_hessian(self, x, delta, H, G):
+        """ Updates an approximation of the inverse of the hessian """ 
         f_grad = self.opt_problem.gradient
         gamma = f_grad(x+delta) - f_grad(x)
         u = delta-dot(H, gamma)
@@ -392,7 +404,9 @@ class QuasiNewtonBroydenBad(QuasiNewtonBroyden):
         return H, None
 
 def find_step_size(f, f_grad, min_bound=0.0, debug=False):
-
+    """ Finds a good candidate for the stepsize using the algorithm 
+    described in Fletcher 
+    """
     rho = 1e-3
     sigma = 0.1
     tau1 = 9
