@@ -105,8 +105,10 @@ class FunctionTransforms(object):
                 grad1 = (self.gradient(x+step1) - self.gradient(x-step1))/(4.*h)
                 grad2 = (self.gradient(x+step2) - self.gradient(x-step2))/(4.*h)
                 hess[i,j] = grad1[i] + grad2[j]
+
         # Symmetrizing step. 
         hess = 0.5*(hess + transpose(hess))
+
         #L = cholesky(hess) # Raises LinAlgError if (but not only if,
                            ## I guess), if hess isn't positive definite.
         return hess
@@ -204,10 +206,17 @@ class AbstractNewton(object):
         
             direction = self.find_direction(f_grad_x, H, G)
             #assert dot(-direction, f_grad_x) < 0:
-            alpha = self.find_step_size(
-                f=lambda alpha: f(x - alpha*direction),
-                f_grad=lambda alpha, f_x=None:
-                    dot(f_grad(x - alpha*direction), -direction))
+
+            # create 1 dimensional versions taking just alpha, for linesearch
+            f_alpha = lambda alpha: f(x - alpha*direction)
+            if self.opt_problem.is_function_gradient:
+                f_grad_alpha = lambda alpha: -dot(direction,
+                                                  f_grad(x - alpha*direction))
+            else:
+                h = 1e-5
+                f_grad_alpha = lambda alpha: (f_alpha(alpha+h)-f_alpha(alpha-h))/(2*h)
+
+            alpha = self.find_step_size(f_alpha, f_grad_alpha)
             
             delta = -alpha*direction
             H, G = self.update_hessian(x, delta, H, G) 
@@ -414,7 +423,7 @@ def find_step_size(f, f_grad, min_bound=0.0, debug=False):
     tau3 = .5
 
     f_0 = f(0)
-    f_grad_0 = f_grad(0, f_0)
+    f_grad_0 = f_grad(0)
     grad_norm = norm(f_grad_0)
 
     if f_grad_0 > 0:
@@ -461,7 +470,7 @@ def find_step_size(f, f_grad, min_bound=0.0, debug=False):
             break
 
         # check condition 2
-        f_grad_alpha = f_grad(alpha, f_alpha)
+        f_grad_alpha = f_grad(alpha)
         if abs(f_grad_alpha) <= -sigma*f_grad_0:
             if debug:
                 print "alpha satisfies both conditions returning"
@@ -503,7 +512,7 @@ def find_step_size(f, f_grad, min_bound=0.0, debug=False):
     # check conditions in book (and that the cached values are correct)
     assert f_a == f(a)
     assert f_a <= f_0 + a*rho*f_grad_0
-    assert f_grad_a == f_grad(a, f_a)
+    assert f_grad_a == f_grad(a)
     assert (b-a)*f_grad_a<0
     assert f_b == f(b)
     assert f_b > f_0 + b*rho*f_grad_0 or f_b >= f_a
@@ -638,7 +647,7 @@ def main():
 
     def f(x):
         return (x[0]+1)**2 + (x[1]-1)**2
-    guess = array([-1.,-1])
+    guess = array([-1.,1.])
 
     from chebyquad import chebyquad, gradchebyquad
     from scipy.optimize import rosen, rosen_der, rosen_hess
@@ -646,13 +655,12 @@ def main():
     op = OptimizationProblem(rosen)
 #    guess = linspace(0, 8, 8)
     
-    #print cn.optimize(guess)
     #cn  = ClassicNewton(op)
     #print "\nClassicNewton.Optimize(...): \n"
     #print cn.optimize(guess, True)
-    #cn = NewtonInexactLine(op);
-    #print "\nNewtonInexact.Optimize(...): \n"
-    #print cn.optimize(guess, True)
+    cn = NewtonInexactLine(op);
+    print "\nNewtonInexact.Optimize(...): \n"
+    print cn.optimize(guess, True)
     #cn = QuasiNewtonBroyden(op);
     #print "\nQuasiNewtonBroyden.Optimize(...): \n"
     #print cn.optimize(guess, True)
@@ -662,9 +670,9 @@ def main():
     #cn = QuasiNewtonDFP(op)
     #print "\nQuasiNewtonDFP.Optimize(...): \n"
     #print cn.optimize(guess, True)
-    cn = QuasiNewtonBroydenBad(op);
-    print "\nQuasiNewtonBroydenBad.Optimize(...): \n"
-    print cn.optimize(guess, True)
+    #cn = QuasiNewtonBroydenBad(op);
+    #print "\nQuasiNewtonBroydenBad.Optimize(...): \n"
+    #print cn.optimize(guess, True)
 
 
 if __name__ == '__main__':

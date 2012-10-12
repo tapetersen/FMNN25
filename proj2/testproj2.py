@@ -2,14 +2,15 @@
 # -*- coding: utf-8 -*-
 # Group: Björn Lennernäs, Tobias Alex-Petersen, Johnny Sjöberg, Andy Lundberg
 #  
-
 from  __future__  import division
-from  scipy       import linspace, array
-from  scipy import linalg as lg
-from  matplotlib.pyplot import *
+
 import scipy.optimize as so
 import chebyquad as c
 import sys
+
+from  scipy       import linspace, array, double
+from  scipy import linalg as lg
+from  matplotlib.pyplot import *
 from scipy.optimize import rosen, rosen_der, rosen_hess
 from numpy.linalg import cholesky, inv, norm, LinAlgError
 import proj2 as p
