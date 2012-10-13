@@ -204,21 +204,17 @@ class AbstractNewton(object):
                 break
         
             direction = self.find_direction(f_grad_x, H, G)
-            if dot(-direction, f_grad_x) > 0:
-                print "Warning gradient in direction positive, using pure \
-                        gradient instead"
-                direction = f_grad_x
-
-            # create 1 dimensional versions taking just alpha, for linesearch
-            f_alpha = lambda alpha: f(x - alpha*direction)
-            if self.opt_problem.is_function_gradient:
-                f_grad_alpha = lambda alpha: -dot(direction,
-                                                  f_grad(x - alpha*direction))
-            else:
-                h = 1e-5
-                f_grad_alpha = lambda alpha: (f_alpha(alpha+h)-f_alpha(alpha-h))/(2*h)
-
+            f_alpha, f_grad_alpha = self.__get1dimf(f, x, direction)
             alpha = self.find_step_size(f_alpha, f_grad_alpha)
+            if alpha is None:
+                print "Warning linesearch failed, trying again with gradient \ descent"
+                direction = f_grad_x
+                f_alpha, f_grad_alpha = self.__get1dimf(f, x, direction)
+                alpha = self.find_step_size(f_alpha, f_grad_alpha)
+
+            if alpha is None:
+                print "Can't find a good direction, bailing out"
+                break
             
             delta = -alpha*direction
             H, G = self.update_hessian(x, delta, H, G) 
@@ -268,7 +264,24 @@ class AbstractNewton(object):
 
         plot(self.xs[:,0], self.xs[:,1], '+-', color='black')
         show()
-         
+
+    def __get1dimf(self, f, x, direction):
+        # create 1 dimensional versions taking just alpha, for linesearch
+        f_alpha = lambda alpha: f(x - alpha*direction)
+
+        # if we have the gradient use that
+        if self.opt_problem.is_function_gradient:
+            f_grad_alpha = lambda alpha: \
+                    -dot(direction, f_grad(x - alpha*direction))
+        # else it's more efficient evaluating it in the direction we want directly
+        else:
+            h = 1e-5
+            f_grad_alpha = lambda alpha: \
+                    (f_alpha(alpha+h)-f_alpha(alpha-h))/(2*h)
+
+        return f_alpha, f_grad_alpha
+
+     
 
 class ClassicNewton(AbstractNewton):
     """
@@ -413,7 +426,7 @@ class QuasiNewtonBroydenBad(QuasiNewtonBroyden):
 
 def find_step_size(f, f_grad, min_bound=0.0, debug=False):
     """ Finds a good candidate for the stepsize using the algorithm 
-    described in Fletcher 
+    described in Fletcher, Returns None if it fails.
     """
     rho = 1e-3
     sigma = 0.1
@@ -426,8 +439,9 @@ def find_step_size(f, f_grad, min_bound=0.0, debug=False):
     grad_norm = norm(f_grad_0)
 
     if f_grad_0 > 0:
-        print "Warning grad positive in direction, linesearch will return 1"
-        return 1.0
+        if debug:
+            print "f_grad_0 positive in lineseach, failing"
+        return None
 
     # Calculate maximum alpha where we would always reject it
     # due to the Armijo rule (condition i)
@@ -444,7 +458,11 @@ def find_step_size(f, f_grad, min_bound=0.0, debug=False):
     f_grad_alpha = f_grad_0
 
     # Begin the bracketing phase
-    for it in range(100):
+    while True:
+        if alpha_prev == alpha:
+            if debug:
+                print "Bracketing failed"
+            return None
         f_prev_alpha = f_alpha
         f_grad_prev_alpha = f_grad_alpha
         f_alpha = f(alpha)
@@ -505,8 +523,7 @@ def find_step_size(f, f_grad, min_bound=0.0, debug=False):
             alpha_prev = _alpha
     else:
         # bracketing failed horribly
-        print "Warning, couldn't bracket alpha defaulting to 1.0"
-        return 1.0
+        return None
 
     # check conditions in book (and that the cached values are correct)
     assert f_a == f(a)
@@ -516,7 +533,7 @@ def find_step_size(f, f_grad, min_bound=0.0, debug=False):
     assert f_b == f(b)
     assert f_b > f_0 + b*rho*f_grad_0 or f_b >= f_a
 
-    for it in range(50):
+    while abs(a-b) > 1e-10:
         left = a + tau2*(b - a)
         right = b - tau3*(b - a)
         if abs(left-right) < 1e-5:
@@ -548,10 +565,10 @@ def find_step_size(f, f_grad, min_bound=0.0, debug=False):
             f_grad_a = f_grad_alpha
             # else:
                 #b = b
-    else:
-        # Sectioning failed horribly
-        print "Warning, couldn't find acceptable alpha defaulting to 1.0"
-        return 1.0
+
+    if debug:
+        print "Sectioning failed"
+    return None
 
             
 def quadratic_minimize(fa, fpa, fb, a, b, left, right):
@@ -660,15 +677,15 @@ def main():
     #cn = NewtonInexactLine(op);
     #print "\nNewtonInexact.Optimize(...): \n"
     #print cn.optimize(guess, True)
-    cn = QuasiNewtonBroyden(op);
-    print "\nQuasiNewtonBroyden.Optimize(...): \n"
-    print cn.optimize(guess, True)
+    #cn = QuasiNewtonBroyden(op);
+    #print "\nQuasiNewtonBroyden.Optimize(...): \n"
+    #print cn.optimize(guess, True)
     #cn = QuasiNewtonBFSG(op)
     #print "\nQuasiNewtonBFSG.Optimize(...): \n"
     #print cn.optimize(guess, True)
-    #cn = QuasiNewtonDFP(op)
-    #print "\nQuasiNewtonDFP.Optimize(...): \n"
-    #print cn.optimize(guess, True)
+    cn = QuasiNewtonDFP(op)
+    print "\nQuasiNewtonDFP.Optimize(...): \n"
+    print cn.optimize(guess, True)
     #cn = QuasiNewtonBroydenBad(op);
     #print "\nQuasiNewtonBroydenBad.Optimize(...): \n"
     #print cn.optimize(guess, True)
