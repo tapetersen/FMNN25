@@ -109,8 +109,6 @@ class FunctionTransforms(object):
         # Symmetrizing step. 
         hess = 0.5*(hess + transpose(hess))
 
-        #L = cholesky(hess) # Raises LinAlgError if (but not only if,
-                           ## I guess), if hess isn't positive definite.
         return hess
 
     def __call__(self, x, *args):
@@ -200,12 +198,16 @@ class AbstractNewton(object):
         for it in xrange(50*x.size):
             if debug:
                 self.xs.append(x)
+                print "x: ", x
 
             if norm(f_grad_x) < 1e-5:
                 break
         
             direction = self.find_direction(f_grad_x, H, G)
-            #assert dot(-direction, f_grad_x) < 0:
+            if dot(-direction, f_grad_x) > 0:
+                print "Warning gradient in direction positive, using pure \
+                        gradient instead"
+                direction = f_grad_x
 
             # create 1 dimensional versions taking just alpha, for linesearch
             f_alpha = lambda alpha: f(x - alpha*direction)
@@ -220,8 +222,6 @@ class AbstractNewton(object):
             
             delta = -alpha*direction
             H, G = self.update_hessian(x, delta, H, G) 
-            #print "H: ", H
-            #print "G: ", G
             x = x + delta
             f_x = f(x)
             f_grad_x = f_grad(x)
@@ -231,7 +231,6 @@ class AbstractNewton(object):
 
         if debug:
             self.xs = array(self.xs)
-            print "xs : ", self.xs
             print "Iterations: ", it
             print "x : ", x
             print "f(x): ", f(x)
@@ -647,7 +646,7 @@ def main():
 
     def f(x):
         return (x[0]+1)**2 + (x[1]-1)**2
-    guess = array([-1.,1.])
+    guess = array([-1.,-1.])
 
     from chebyquad import chebyquad, gradchebyquad
     from scipy.optimize import rosen, rosen_der, rosen_hess
@@ -658,12 +657,12 @@ def main():
     #cn  = ClassicNewton(op)
     #print "\nClassicNewton.Optimize(...): \n"
     #print cn.optimize(guess, True)
-    cn = NewtonInexactLine(op);
-    print "\nNewtonInexact.Optimize(...): \n"
-    print cn.optimize(guess, True)
-    #cn = QuasiNewtonBroyden(op);
-    #print "\nQuasiNewtonBroyden.Optimize(...): \n"
+    #cn = NewtonInexactLine(op);
+    #print "\nNewtonInexact.Optimize(...): \n"
     #print cn.optimize(guess, True)
+    cn = QuasiNewtonBroyden(op);
+    print "\nQuasiNewtonBroyden.Optimize(...): \n"
+    print cn.optimize(guess, True)
     #cn = QuasiNewtonBFSG(op)
     #print "\nQuasiNewtonBFSG.Optimize(...): \n"
     #print cn.optimize(guess, True)

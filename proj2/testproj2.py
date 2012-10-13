@@ -8,9 +8,9 @@ import scipy.optimize as so
 import chebyquad as c
 import sys
 
-from  scipy       import linspace, array, double
-from  scipy import linalg as lg
-from  matplotlib.pyplot import *
+from scipy       import linspace, array, double, all
+from scipy import linalg as lg
+from matplotlib.pyplot import *
 from scipy.optimize import rosen, rosen_der, rosen_hess
 from numpy.linalg import cholesky, inv, norm, LinAlgError
 import proj2 as p
@@ -45,9 +45,9 @@ def test_hessian():
 near = lambda x,y: abs(c.chebyquad(x)-c.chebyquad(y)) < 1e-8
 """ Helper method for solver tests"""
     
-sol4 = (so.fmin_bfgs(c.chebyquad,linspace(0,1,4),c.gradchebyquad))
-sol8 = (so.fmin_bfgs(c.chebyquad,linspace(0,1,8),c.gradchebyquad))
-solr = array([1.,1.])
+sol4 = (so.fmin_bfgs(c.chebyquad, linspace(0, 1, 4), c.gradchebyquad))
+sol8 = (so.fmin_bfgs(c.chebyquad,linspace(0, 1, 8), c.gradchebyquad))
+solr = array([1., 1.])
 
 def test_classic_newton():
     op = p.OptimizationProblem(c.chebyquad)
