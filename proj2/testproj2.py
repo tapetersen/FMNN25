@@ -57,7 +57,7 @@ def test_classic_newton():
     guess=linspace(0,1,8)
     assert near(sol8,(cn.optimize(guess)))
     
-    op = p.OptimizationProblem(rosenbrock)
+    op = p.OptimizationProblem(rosen)
     cn  = p.ClassicNewton(op)
     guess = array([-1.,-1.])
     sol = array([1.,1.])
@@ -71,7 +71,7 @@ def test_newton_exact_line_search():
     guess=linspace(0,1,8)
     assert near(sol8,(cn.optimize(guess)))
     
-    op = p.OptimizationProblem(rosenbrock)
+    op = p.OptimizationProblem(rosen)
     cn  = p.NewtonExactLine(op)
     guess = array([-1.,-1.])
     sol = array([1.,1.])
@@ -84,7 +84,7 @@ def test_newton_inexact_line_search():
     assert near(sol4,(cn.optimize(guess)))
     guess=linspace(0,1,8)
     assert near(sol8,(cn.optimize(guess)))
-    op = p.OptimizationProblem(rosenbrock)
+    op = p.OptimizationProblem(rosen)
     cn  = p.NewtonInexactLine(op)
     guess = array([-1.,-1.])
     sol = array([1.,1.])
@@ -98,7 +98,7 @@ def test_quasi_newton_broyden():
     guess=linspace(0,1,8)
     assert near(sol8,(cn.optimize(guess)))
     
-    op = p.OptimizationProblem(rosenbrock)
+    op = p.OptimizationProblem(rosen)
     cn  = p.QuasiNewtonBroyden(op)
     guess = array([-1.,-1.])
     sol = array([1.,1.])
@@ -114,7 +114,7 @@ def test_quasi_newton_broyden_bad():
     
     assert near(sol8,(cn.optimize(guess)))
     
-    op = p.OptimizationProblem(rosenbrock)
+    op = p.OptimizationProblem(rosen)
     cn  = p.QuasiNewtonBroydenBad(op)
     guess = array([-1.,-1.])
     sol = array([1.,1.])
@@ -128,10 +128,9 @@ def test_quasi_newton_BFSG():
     
     guess=linspace(0,1,8)
     k = (cn.optimize(guess))
-    print k, sol8, norm(k - sol8), op.objective_function(k),op.objective_function(sol8)
     assert near(sol8,k)
     
-    op = p.OptimizationProblem(rosenbrock)
+    op = p.OptimizationProblem(rosen)
     cn  = p.QuasiNewtonBFSG(op)
     guess = array([-1.,-1.])
     sol = array([1.,1.])
@@ -148,7 +147,7 @@ def test_quasi_newton_DFP():
     print norm(k - sol8)
     assert near(sol8,k)
     
-    op = p.OptimizationProblem(rosenbrock)
+    op = p.OptimizationProblem(rosen)
     cn  = p.QuasiNewtonDFP(op)
     guess = array([-1.,-1.])
     sol = array([1.,1.])
@@ -199,7 +198,7 @@ def test_linesearch():
 
 
 def test_gradient():
-    """ Test the gradient using rosenbrock and higher order functions
+    """ Test the gradient using rosen and higher order functions
     """
     def F(x):
         return x[0]**2 + x[0]*x[1] + x[1]**2
