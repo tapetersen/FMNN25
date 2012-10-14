@@ -703,7 +703,7 @@ def main():
 
     def f(x):
         return (x[0]+1)**2 + (x[1]-1)**2
-    guess = array([-1.,-1.])
+    guess = array([-1., 1.])
 
     from chebyquad import chebyquad, gradchebyquad
     from scipy.optimize import rosen, rosen_der, rosen_hess
@@ -715,6 +715,9 @@ def main():
     #cn  = ClassicNewton(op)
     #print "\nClassicNewton.Optimize(...): \n"
     #print cn.optimize(guess, True)
+    cn = NewtonExactLine(op);
+    print "\nNewtonExact.Optimize(...): \n"
+    print cn.optimize(guess, True)
     #cn = NewtonInexactLine(op);
     #print "\nNewtonInexact.Optimize(...): \n"
     #print cn.optimize(guess, True)
@@ -727,9 +730,9 @@ def main():
     #cn = QuasiNewtonDFP(op)
     #print "\nQuasiNewtonDFP.Optimize(...): \n"
     #print cn.optimize(guess, True)
-    cn = QuasiNewtonBroydenBad(op);
-    print "\nQuasiNewtonBroydenBad.Optimize(...): \n"
-    print cn.optimize(guess, True)
+    #cn = QuasiNewtonBroydenBad(op);
+    #print "\nQuasiNewtonBroydenBad.Optimize(...): \n"
+    #print cn.optimize(guess, True)
 
 
 if __name__ == '__main__':

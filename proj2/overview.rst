@@ -19,7 +19,7 @@ for linesearch.
 
 Solvers
 --------
-The solvers are written using inheritance from AbstractNewton. THe optimize
+The solvers are written using inheritance from AbstractNewton. The optimize
 contains all logic and the subclasses speialize it by overriding the derivation
 of the hessian, the way to get a search direction and the linesearch for a
 minimum along given direction.

@@ -30,7 +30,7 @@ near = lambda x,y: abs(c.chebyquad(x)-c.chebyquad(y)) < 1e-8
     
 sol4 = (so.fmin_bfgs(c.chebyquad, linspace(0, 1, 4), c.gradchebyquad))
 sol8 = (so.fmin_bfgs(c.chebyquad, linspace(0, 1, 8), c.gradchebyquad))
-solr = array([1., 1.])
+sol11 = (so.fmin_bfgs(c.chebyquad, linspace(0, 1, 11), c.gradchebyquad))
 
 def test_quasi_newton_broyden():
     op = p.OptimizationProblem(c.chebyquad)
@@ -39,6 +39,8 @@ def test_quasi_newton_broyden():
     assert near(sol4,(cn.optimize(guess)))
     guess=linspace(0,1,8)
     assert near(sol8,(cn.optimize(guess)))
+    guess=linspace(0,1,11)
+    assert near(sol11,(cn.optimize(guess)))
     
 def test_quasi_newton_broyden_bad():
     op = p.OptimizationProblem(c.chebyquad)
@@ -47,6 +49,9 @@ def test_quasi_newton_broyden_bad():
     assert near(sol4,(cn.optimize(guess)))
     guess=linspace(0,1,8)
     assert near(sol8,(cn.optimize(guess)))
+
+    #guess=linspace(0,1,11)
+    #assert near(sol11,(cn.optimize(guess)))
     
     
 def test_quasi_newton_BFSG():
@@ -58,6 +63,9 @@ def test_quasi_newton_BFSG():
     guess=linspace(0,1,8)
     k = (cn.optimize(guess))
     assert near(sol8,k)
+
+    guess=linspace(0,1,11)
+    assert near(sol11,(cn.optimize(guess)))
     
     
 def test_quasi_newton_DFP():
@@ -70,4 +78,7 @@ def test_quasi_newton_DFP():
     k = (cn.optimize(guess))
     print norm(k - sol8)
     assert near(sol8,k)
+
+    guess=linspace(0,1,11)
+    assert near(sol11,(cn.optimize(guess)))
     
