@@ -207,7 +207,7 @@ class AbstractNewton(object):
             f_alpha, f_grad_alpha = self.__get1dimf(f, x, direction)
             alpha = self.find_step_size(f_alpha, f_grad_alpha)
             if alpha is None:
-                print "Warning linesearch failed, trying again with gradient \ descent"
+                print "Warning linesearch failed, trying again with gradient descent"
                 direction = f_grad_x
                 f_alpha, f_grad_alpha = self.__get1dimf(f, x, direction)
                 alpha = self.find_step_size(f_alpha, f_grad_alpha)
@@ -668,8 +668,9 @@ def main():
     from chebyquad import chebyquad, gradchebyquad
     from scipy.optimize import rosen, rosen_der, rosen_hess
 
-    op = OptimizationProblem(rosen)
-#    guess = linspace(0, 8, 8)
+    op = OptimizationProblem(chebyquad)
+    #op = OptimizationProblem(rosen)
+    guess = linspace(0, 1, 8)
     
     #cn  = ClassicNewton(op)
     #print "\nClassicNewton.Optimize(...): \n"
@@ -682,10 +683,10 @@ def main():
     #print cn.optimize(guess, True)
     #cn = QuasiNewtonBFSG(op)
     #print "\nQuasiNewtonBFSG.Optimize(...): \n"
+    #print cn.optimize(guess, False)
+    #cn = QuasiNewtonDFP(op)
+    #print "\nQuasiNewtonDFP.Optimize(...): \n"
     #print cn.optimize(guess, True)
-    cn = QuasiNewtonDFP(op)
-    print "\nQuasiNewtonDFP.Optimize(...): \n"
-    print cn.optimize(guess, True)
     #cn = QuasiNewtonBroydenBad(op);
     #print "\nQuasiNewtonBroydenBad.Optimize(...): \n"
     #print cn.optimize(guess, True)
