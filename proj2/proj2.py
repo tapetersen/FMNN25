@@ -82,7 +82,6 @@ class FunctionTransforms(object):
         else:
             return (self.f(x+hh) - fx)/h
 
-
     def hessian(self, x):
         """ Approximates the hessian using (central) finite differences
         and gradient computation. 
@@ -94,23 +93,15 @@ class FunctionTransforms(object):
         h    = 1e-5
         # Approximates hessian using gradient, see 
         # http://v8doc.sas.com/sashtml/ormp/chap5/sect28.htm
-        # TODO: We don't need to compute this many values since its
-        # symmetric. If we do t more efficiently we don't need
-        # the symmetrizing step (I think). - B
-        step1 = zeros_like(x)
-        step2 = zeros_like(x)
+        # uses 2n gradient evaluations = 2n*2n = 4n^2 function evaluations
+        # if not supplied
+        step = zeros_like(x)
         for i in range(x.size):
-            step2[i]  = h
-            grad2 = (self.gradient(x+step2) - self.gradient(x-step2))/(4.*h)
-            for j in range(x.size):
-                step1[j]  = h
-                grad1 = (self.gradient(x+step1) - self.gradient(x-step1))/(4.*h)
-                hess[i,j] = grad1[i] + grad2[j]
-                step1[j]  = 0.
-            step2[i]  = 0.
+            step[i]  = h
+            hess[i] = self.gradient(x+step) - self.gradient(x-step)
+            step[i]  = 0
 
-        # Symmetrizing step. 
-        hess = 0.5*(hess + transpose(hess))
+        hess = (hess + hess.T)/(4*h)
 
         return hess
 
