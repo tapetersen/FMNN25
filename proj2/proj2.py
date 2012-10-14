@@ -15,6 +15,7 @@ from numpy.linalg import cholesky, inv, norm, LinAlgError
 from collections import defaultdict
 import chebyquad as cqp
 
+
 class FunctionTransforms(object):
     """ A class that provides a transform of a given function. 
     Provided transforms: 

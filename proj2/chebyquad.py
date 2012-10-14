@@ -110,7 +110,7 @@ def gradchebyquad_old(x):
     """
     Evaluation of the gradient function of chebyquad
     """
-    chq = chebyquad_fcn(x)
+    chq = chebyquad_fcn_old(x)
     UM = 4. / len(x) * array([[(i+1) * U(2. * xj - 1., i) 
                              for xj in x] for i in xrange(len(x) - 1)])
     return dot(chq[1:].reshape((1, -1)), UM).reshape((-1, ))

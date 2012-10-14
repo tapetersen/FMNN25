@@ -16,6 +16,13 @@ from numpy.linalg import cholesky, inv, norm, LinAlgError
 from .. import chebyquad as c
 from .. import proj2 as p
 
+"""
+Module testing the pure newton methods on the chebyquad problem (slow)
+
+Tests the ClassicNewton, NewtonExact and NewtonInexact methods on the chebyquad
+problem of dimensions 4 and 8.  works but very slow since they do excessive
+function evaluations
+"""
 
 near = lambda x,y: abs(c.chebyquad(x)-c.chebyquad(y)) < 1e-8
 """ Helper method for solver tests"""
@@ -32,13 +39,6 @@ def test_classic_newton():
     guess=linspace(0,1,8)
     assert near(sol8,(cn.optimize(guess)))
     
-def test_newton_exact_line_search():
-    op = p.OptimizationProblem(c.chebyquad)
-    guess=linspace(0,1,4)
-    cn  = p.NewtonExactLine(op)
-    assert near(sol4,(cn.optimize(guess)))
-    guess=linspace(0,1,8)
-    assert near(sol8,(cn.optimize(guess)))
     
 def test_newton_inexact_line_search():
     op = p.OptimizationProblem(c.chebyquad)
@@ -48,3 +48,10 @@ def test_newton_inexact_line_search():
     guess=linspace(0,1,8)
     assert near(sol8,(cn.optimize(guess)))
 
+def test_newton_exact_line_search():
+    op = p.OptimizationProblem(c.chebyquad)
+    guess=linspace(0,1,4)
+    cn  = p.NewtonExactLine(op)
+    assert near(sol4,(cn.optimize(guess)))
+    guess=linspace(0,1,8)
+    assert near(sol8,(cn.optimize(guess)))

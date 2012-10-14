@@ -13,7 +13,6 @@ from matplotlib.pyplot import *
 from scipy.optimize import rosen, rosen_der, rosen_hess
 from numpy.linalg import cholesky, inv, norm, LinAlgError
 
-from .. import chebyquad as c
 from .. import proj2 as p
 
 solr = array([1., 1.])
