@@ -15,6 +15,9 @@ from numpy.linalg import cholesky, inv, norm, LinAlgError
 
 from .. import proj2 as p
 
+"""
+Tests all optimizatin methods on the rosenbrock funciton with initial guess [-1, -1]
+"""
 solr = array([1., 1.])
 
 def test_classic_newton():

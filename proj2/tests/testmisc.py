@@ -16,6 +16,31 @@ from numpy.linalg import cholesky, inv, norm, LinAlgError
 from .. import chebyquad as c
 from .. import proj2 as p
 
+"""
+Tests various support functions used in the optimization routines
+
+test_gradient checks the numerical gradient calculation
+test_hessian checks the numerical hessian calculation
+test_minimize checks the cubic miniize used in linesearch
+test_linesearch tests the inexact linesearch algorithm
+"""
+
+def test_gradient():
+    """ Test the gradient using rosen and higher order functions
+    """
+    def F(x):
+        return x[0]**2 + x[0]*x[1] + x[1]**2
+    def F_grad(x):
+        return array([2*x[0]+x[1],x[0]+2*x[1]])
+    opt1 = p.OptimizationProblem(rosen)
+    opt2 = p.OptimizationProblem(F)
+    for i in range(-3,3):
+        for j in range(-3,3):
+            k  = opt1.gradient([float(i),float(j)]) - \
+                rosen_der([float(i),float(j)])
+            kk = opt2.gradient([float(i),float(j)]) - \
+                 F_grad([float(i),float(j)])
+            assert(sum( abs((k+kk)) <1e-5 )==2)
 def test_hessian():
     """ Test the the numerical hessian for the rosenbrock function 
     with and without explicit gradient and a function of a higher order
@@ -85,19 +110,3 @@ def test_linesearch():
     assert 0.15 < alpha and alpha < 0.17
 
 
-def test_gradient():
-    """ Test the gradient using rosen and higher order functions
-    """
-    def F(x):
-        return x[0]**2 + x[0]*x[1] + x[1]**2
-    def F_grad(x):
-        return array([2*x[0]+x[1],x[0]+2*x[1]])
-    opt1 = p.OptimizationProblem(rosen)
-    opt2 = p.OptimizationProblem(F)
-    for i in range(-3,3):
-        for j in range(-3,3):
-            k  = opt1.gradient([float(i),float(j)]) - \
-                rosen_der([float(i),float(j)])
-            kk = opt2.gradient([float(i),float(j)]) - \
-                 F_grad([float(i),float(j)])
-            assert(sum( abs((k+kk)) <1e-5 )==2)

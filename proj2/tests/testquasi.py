@@ -13,8 +13,16 @@ from matplotlib.pyplot import *
 from scipy.optimize import rosen, rosen_der, rosen_hess
 from numpy.linalg import cholesky, inv, norm, LinAlgError
 
+if __name__ == "__main__" and __package__ is None:
+            __package__ = "tests"
+
 from .. import chebyquad as c
 from .. import proj2 as p
+
+
+"""
+Tests the solvers on the chebyquad problem in 4, 8 and 11 dimensions.
+"""
 
 
 near = lambda x,y: abs(c.chebyquad(x)-c.chebyquad(y)) < 1e-8
