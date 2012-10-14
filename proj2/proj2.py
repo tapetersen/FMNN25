@@ -420,9 +420,9 @@ class QuasiNewtonBroydenBad(QuasiNewtonBroyden):
         """ Updates an approximation of the inverse of the hessian """ 
         f_grad = self.opt_problem.gradient
         gamma = f_grad(x+delta) - f_grad(x)
-        u = delta-dot(H, gamma)
-        a = 1/dot(u, gamma);
-        H = H + a*outer(u, u)
+        u = delta - dot(H, gamma)
+        a = 1/dot(gamma, gamma);
+        H = H + a*outer(u, gamma)
         return H, None
 
 def find_step_size(f, f_grad, min_bound=0.0, debug=False):
@@ -669,9 +669,9 @@ def main():
     from chebyquad import chebyquad, gradchebyquad
     from scipy.optimize import rosen, rosen_der, rosen_hess
 
-    op = OptimizationProblem(chebyquad)
-    #op = OptimizationProblem(rosen)
-    guess = linspace(0, 1, 8)
+    #op = OptimizationProblem(chebyquad)
+    op = OptimizationProblem(rosen)
+    #guess = linspace(0, 1, 8)
     
     #cn  = ClassicNewton(op)
     #print "\nClassicNewton.Optimize(...): \n"
@@ -688,9 +688,9 @@ def main():
     #cn = QuasiNewtonDFP(op)
     #print "\nQuasiNewtonDFP.Optimize(...): \n"
     #print cn.optimize(guess, True)
-    #cn = QuasiNewtonBroydenBad(op);
-    #print "\nQuasiNewtonBroydenBad.Optimize(...): \n"
-    #print cn.optimize(guess, True)
+    cn = QuasiNewtonBroydenBad(op);
+    print "\nQuasiNewtonBroydenBad.Optimize(...): \n"
+    print cn.optimize(guess, True)
 
 
 if __name__ == '__main__':
