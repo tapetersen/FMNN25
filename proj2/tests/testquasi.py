@@ -21,7 +21,7 @@ from .. import proj2 as p
 
 
 """
-Tests the solvers on the chebyquad problem in 4, 8 and 11 dimensions.
+Tests the solvers on the chebyquad problem in 4, 8 dimensions.
 """
 
 
@@ -29,7 +29,7 @@ near = lambda x,y: abs(c.chebyquad(x)-c.chebyquad(y)) < 1e-8
 """ Helper method for solver tests"""
     
 sol4 = (so.fmin_bfgs(c.chebyquad, linspace(0, 1, 4), c.gradchebyquad))
-sol8 = (so.fmin_bfgs(c.chebyquad,linspace(0, 1, 8), c.gradchebyquad))
+sol8 = (so.fmin_bfgs(c.chebyquad, linspace(0, 1, 8), c.gradchebyquad))
 solr = array([1., 1.])
 
 def test_quasi_newton_broyden():

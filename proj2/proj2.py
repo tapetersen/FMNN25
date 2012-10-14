@@ -97,15 +97,17 @@ class FunctionTransforms(object):
         # TODO: We don't need to compute this many values since its
         # symmetric. If we do t more efficiently we don't need
         # the symmetrizing step (I think). - B
+        step1 = zeros_like(x)
+        step2 = zeros_like(x)
         for i in range(x.size):
+            step2[i]  = h
+            grad2 = (self.gradient(x+step2) - self.gradient(x-step2))/(4.*h)
             for j in range(x.size):
-                step1     = zeros_like(x)
-                step2     = zeros_like(x)
                 step1[j]  = h
-                step2[i]  = h
                 grad1 = (self.gradient(x+step1) - self.gradient(x-step1))/(4.*h)
-                grad2 = (self.gradient(x+step2) - self.gradient(x-step2))/(4.*h)
                 hess[i,j] = grad1[i] + grad2[j]
+                step1[j]  = 0.
+            step2[i]  = 0.
 
         # Symmetrizing step. 
         hess = 0.5*(hess + transpose(hess))
@@ -174,7 +176,8 @@ class AbstractNewton(object):
     """
     Super class for various optimization methods
 
-    Please note - opt_problem inherits from the class Optimization problem
+    Params:
+    opt_problem instance of OptimizationProblem
     """
     
     def __init__(self, opt_problem):
@@ -194,8 +197,7 @@ class AbstractNewton(object):
         f_x      = f(x)
         f_grad   = self.opt_problem.gradient
         f_grad_x = f_grad(x)
-        G = self.opt_problem.hessian(x)
-        H = inv(G)
+        H, G     = self.init_hessian(x)
         for it in xrange(50*x.size):
             if debug:
                 self.xs.append(x)
@@ -245,6 +247,9 @@ class AbstractNewton(object):
     def update_hessian(self, x, delta, H, G):
         pass
 
+    def init_hessian(self, x):
+        pass
+
     def plot(self):
         # find min/max of points
         xmin, ymin = amin(self.xs, axis=0)
@@ -286,9 +291,10 @@ class AbstractNewton(object):
 
 class ClassicNewton(AbstractNewton):
     """
-    A classic newton solver. Can get stuck in local minima, extends from
-    OptimizationMethod. 
-    Also acts as a superclass for 
+    A classic newton solver. Can get stuck in local minima
+
+    Works very well and requires the least iterations on our test problems.
+    Computing the hessian is very expensive though.
     """
     
     def __init__(self, opt_problem):
@@ -314,8 +320,18 @@ class ClassicNewton(AbstractNewton):
         """ Updates hessian for new point """ 
         return (None, self.opt_problem.hessian(x + delta))
 
+    def init_hessian(self, x):
+        G = self.opt_problem.hessian(x)
+        return None, G
+
         
 class NewtonExactLine(ClassicNewton):
+    """
+    Newton method with exact line search as given in Fletcher
+
+    Succeeds at rosenbrock but worse than without linesearch in all cases.
+    Fails at chebyquad size 8 and takes to long to test at 11
+    """
     
     
     def __init__(self, opt_problem):
@@ -329,6 +345,9 @@ class NewtonExactLine(ClassicNewton):
 class NewtonInexactLine(NewtonExactLine):    
     """
     Newton method with inexact line search as given in Fletcher
+
+    Actually worse than without linesearch worse in our cases. If the true
+    hessian is availible it's best to trust it apparently.
     """
     
     def __init__(self, *args, **kwargs):
@@ -340,12 +359,51 @@ class NewtonInexactLine(NewtonExactLine):
 
 
 
-class QuasiNewtonDFP(NewtonInexactLine):    
-    """ Implemented as in lecture 3 """
+
+class QuasiNewtonBroyden(NewtonInexactLine):    
+    """
+    Broyden's quasi newton method
+
+    Uses formula from lecture notes. Works very well on our test problems
+    but needs the gradient descent fallback as the Hessian is sometimes not
+    positive definite.
+    """ 
+    
+    def __init__(self, *args, **kwargs):
+        super(QuasiNewtonBroyden, self).__init__(*args, **kwargs)
+
+    def init_hessian(self, x):
+        return eye(x.size), None
+        
+    def update_hessian(self, x, delta, H, G):
+        """ Updates an approximation of the inverse of the hessian  """
+        
+        #print str(norm(inv(self.opt_problem.hessian(x))-H, 'fro'))
+        f_grad = self.opt_problem.gradient
+        gamma = f_grad(x+delta) - f_grad(x)
+        u = delta - dot(H, gamma)
+        a = 1/dot(u, gamma)
+
+        H = H + outer(u, u)*a
+
+        return H, None
+
+    def find_direction(self, f_grad_x, H, G):
+        """ Uses the approximated inverse to solve for the newton direction """ 
+        return dot(H, f_grad_x)
+
+class QuasiNewtonDFP(QuasiNewtonBroyden):    
+    """
+    Implemented as in lecturenotes 
+    
+    
+    Works well on all problems, worse than BFGS though
+    """
     
     def __init__(self, *args, **kwargs):
         super(QuasiNewtonDFP, self).__init__(*args, **kwargs)
         
+
     def update_hessian(self, x, delta, H, G):
         """ Updates an approximation of the inverse of the hessian """ 
         f_grad = self.opt_problem.gradient
@@ -357,18 +415,22 @@ class QuasiNewtonDFP(NewtonInexactLine):
 
         return H, None
 
-    def find_direction(self, f_grad_x, H, G):
-        """ Uses the approximated inverse to solve for the newton direction """
-        return dot(H, f_grad_x)
 
-class QuasiNewtonBFSG(NewtonInexactLine):    
-    """ Implemented as on  http://en.wikipedia.org/wiki/BFGS_method """
+class QuasiNewtonBFSG(QuasiNewtonBroyden):
+    """
+    Implemented as on  http://en.wikipedia.org/wiki/BFGS_method 
+    
+    Works very well on all problems, keeps search direction negative in
+    rosenbrock.
+    """
     
     def __init__(self, *args, **kwargs):
         super(QuasiNewtonBFSG, self).__init__(*args, **kwargs)
         
     def update_hessian(self, x, delta, H, G):
-        """ Updates an approximation of the inverse of the hessian """ 
+        """ Updates an approximation of the inverse of the hessian 
+        
+        """ 
         f_grad = self.opt_problem.gradient
         gamma = f_grad(x+delta) - f_grad(x)
         d_dot_g = dot(delta, gamma)
@@ -381,43 +443,20 @@ class QuasiNewtonBFSG(NewtonInexactLine):
 
         return H, None
 
-    def find_direction(self, f_grad_x, H, G):
-        """ Uses the approximated inverse to solve for the newton direction """
-        return dot(H, f_grad_x)
-
-class QuasiNewtonBroyden(NewtonInexactLine):    
-    
-    def __init__(self, *args, **kwargs):
-        super(QuasiNewtonBroyden, self).__init__(*args, **kwargs)
-        
-    def update_hessian(self, x, delta, H, G):
-        """ Updates an approximation of the inverse of the hessian """ 
-        #print str(norm(inv(self.opt_problem.hessian(x))-H, 'fro'))
-        f_grad = self.opt_problem.gradient
-        gamma = f_grad(x+delta) - f_grad(x)
-        u = delta - dot(H, gamma)
-        a = 1/dot(u, gamma)
-
-        # Both of these will succeed on rosen but do some strange errors on the
-        # definition in lecture notes
-        H = H + outer(u, u)*a
-
-        # wikipedias
-        #H = H + dot(outer(delta - dot(H, gamma), delta), H) / \
-                #dot(delta, dot(H, gamma))
-        return H, None
-
-    def find_direction(self, f_grad_x, H, G):
-        """ Uses the approximated inverse to solve for the newton direction """ 
-        return dot(H, f_grad_x)
-
 class QuasiNewtonBroydenBad(QuasiNewtonBroyden):    
     
     def __init__(self, *args, **kwargs):
         super(QuasiNewtonBroydenBad, self).__init__(*args, **kwargs)
         
     def update_hessian(self, x, delta, H, G):
-        """ Updates an approximation of the inverse of the hessian """ 
+        """ 
+        Updates an approximation of the inverse of the hessian 
+
+        Uses formula from http://en.wikipedia.org/wiki/Broyden's_method,
+        the one that is called bad. Doesn't find solution to rosenbrock in 100
+        iteration
+
+        """ 
         f_grad = self.opt_problem.gradient
         gamma = f_grad(x+delta) - f_grad(x)
         u = delta - dot(H, gamma)
