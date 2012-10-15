@@ -28,8 +28,7 @@ class FunctionTransforms(object):
     The transforms are constructed by finite differences. 
     """
     
-    def __init__(self, function, 
-                 gradient = False, hessian = False):
+    def __init__(self, f, gradient = False, hessian = False, f_grad=None):
         """
         The constructor receives information about what kind of transform is needed
         for the moment - only one transform can be specified.
@@ -45,7 +44,9 @@ class FunctionTransforms(object):
             raise Exception("You can only specify one transform");
         self.grad = gradient
         self.hess = hessian
-        self.f    = function
+        self.f    = f
+        if f_grad is not None:
+            self.gradient = f_grad
 
 
     def gradient(self, x, fx=None):
@@ -66,21 +67,6 @@ class FunctionTransforms(object):
             step[i] = 0.0
 
         return grad
-
-    def gradient2(self, x, fx=None):
-        
-        # force column vector
-        x = asarray(x).reshape(-1, 1)
-
-        ## hh is matrix with h in diagonal
-        h    = 1e-5 
-        hh   = eye(x.size)*h
-
-        # x+hh will be matrix with x+xi*h in the column vectors
-        if fx is None:
-            return (self.f(x+hh) - self.f(x-hh))/(2*h)
-        else:
-            return (self.f(x+hh) - fx)/h
 
     def hessian(self, x):
         """ Approximates the hessian using (central) finite differences
@@ -118,6 +104,18 @@ class FunctionTransforms(object):
         #raise Exception("Transform incompletely specified")
         #This eception is never reached since always one trasform is guaranteed to be specified through the constructor 
 
+def _wrap(function):
+    """
+    Wrap function to count number of calls
+
+    idea borrowed from numpy
+    """
+    nc = [0]
+    def func(x):
+        nc[0] += 1
+        return function(x)
+    return nc, func
+
 class OptimizationProblem(object):
     """ Provides an interface to various methods on a given function
     which can be used to optimize it. 
@@ -140,28 +138,30 @@ class OptimizationProblem(object):
 
         self.min_bound = min_bound
         
-        self.objective_function = objective_function
-        """ The objective function as a callable attribute """
-        self.is_function_gradient = False;
+        self.num_calls,  self.objective_function = _wrap(objective_function)
+
         #A gradient is specfied by the user, use it.
         #Otherwise - obtain the gradient numerically
         #Always construct the Hessian numerically
+
+        """ The gradient of the objective function as a callable attribute """
         if function_gradient is not None:
-            self.gradient = lambda x, _=None : function_gradient(x)
-            """ The gradient of the objective function as a callable attribute """
             self.is_function_gradient = True;
         else:
-            self.gradient = FunctionTransforms(objective_function, 
+            self.is_function_gradient = False;
+            function_gradient = FunctionTransforms(self.objective_function, 
                                             gradient=True)
-        self.hessian = FunctionTransforms(objective_function,  
-                                            hessian=True)
+        self.num_grad_calls, self.gradient =  _wrap(function_gradient)
+
         """ The hessian of the objective function as a callable attribute """
+        self.hessian = FunctionTransforms(self.objective_function,  
+                                          hessian=True, f_grad=self.gradient)
+
     def __call__(self, x):
         """
         Evaluates the objective function associated with this problem. 
         """
         return self.objective_function(x)
-
 
 class AbstractNewton(object):
     """
@@ -181,18 +181,21 @@ class AbstractNewton(object):
 
         if debug:
             self.xs = []
+
         # x* is a local minimizer if grad(f(x*)) = 0 and 
         # if its hessian is positive definite
-        
-        f        = self.opt_problem.objective_function
-        f_x      = f(x)
+        if debug:
+            self.fc = [0]
+            f = self.opt_problem.objective_function
+        else:
+            f = self.opt_problem.objective_function
         f_grad   = self.opt_problem.gradient
         f_grad_x = f_grad(x)
         H, G     = self.init_hessian(x)
         for it in xrange(50*x.size):
             if debug:
                 self.xs.append(x)
-                print "x: ", x
+                print "x%d: "%it, x
 
             if norm(f_grad_x) < 1e-5:
                 break
@@ -204,16 +207,16 @@ class AbstractNewton(object):
                 print "Warning linesearch failed, trying again with gradient descent"
                 direction = f_grad_x
                 f_alpha, f_grad_alpha = self.__get1dimf(f, x, direction)
-                alpha = self.find_step_size(f_alpha, f_grad_alpha)
+                alpha = self.find_step_size(f_alpha, f_grad_alpha, )
 
             if alpha is None:
                 print "Can't find a good direction, bailing out"
                 break
             
+            print "alpha: ", alpha
             delta = -alpha*direction
             H, G = self.update_hessian(x, delta, H, G) 
             x = x + delta
-            f_x = f(x)
             f_grad_x = f_grad(x)
 
         else:
@@ -222,6 +225,9 @@ class AbstractNewton(object):
         if debug:
             self.xs = array(self.xs)
             print "Iterations: ", it
+            print "Func calls: ", self.opt_problem.num_calls[0]
+            print "Grad calls: ", self.opt_problem.num_grad_calls[0]
+
             print "x : ", x
             print "f(x): ", f(x)
             if x.size == 2:
@@ -268,8 +274,10 @@ class AbstractNewton(object):
 
         # if we have the gradient use that
         if self.opt_problem.is_function_gradient:
+            f_grad = self.opt_problem.gradient
             f_grad_alpha = lambda alpha: \
                     -dot(direction, f_grad(x - alpha*direction))
+
         # else it's more efficient evaluating it in the direction we want directly
         else:
             h = 1e-5
@@ -699,25 +707,25 @@ def main():
     from chebyquad import chebyquad, gradchebyquad
     from scipy.optimize import rosen, rosen_der, rosen_hess
 
-    #op = OptimizationProblem(chebyquad)
+    #op = OptimizationProblem(chebyquad, gradchebyquad)
     op = OptimizationProblem(rosen)
     #guess = linspace(0, 1, 8)
     
     #cn  = ClassicNewton(op)
     #print "\nClassicNewton.Optimize(...): \n"
     #print cn.optimize(guess, True)
-    cn = NewtonExactLine(op);
-    print "\nNewtonExact.Optimize(...): \n"
-    print cn.optimize(guess, True)
+    #cn = NewtonExactLine(op);
+    #print "\nNewtonExact.Optimize(...): \n"
+    #print cn.optimize(guess, True)
     #cn = NewtonInexactLine(op);
     #print "\nNewtonInexact.Optimize(...): \n"
     #print cn.optimize(guess, True)
-    #cn = QuasiNewtonBroyden(op);
-    #print "\nQuasiNewtonBroyden.Optimize(...): \n"
-    #print cn.optimize(guess, True)
+    cn = QuasiNewtonBroyden(op);
+    print "\nQuasiNewtonBroyden.Optimize(...): \n"
+    print cn.optimize(guess, True)
     #cn = QuasiNewtonBFSG(op)
     #print "\nQuasiNewtonBFSG.Optimize(...): \n"
-    #print cn.optimize(guess, False)
+    #print cn.optimize(guess, True)
     #cn = QuasiNewtonDFP(op)
     #print "\nQuasiNewtonDFP.Optimize(...): \n"
     #print cn.optimize(guess, True)
