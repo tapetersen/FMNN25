@@ -10,32 +10,48 @@ import nose
 from scipy import double
 
 
-class Newmark(Explicit_Problem):
+class Newmark(Explicit_ODE):
     
-    def __init__(self, rhs=None, y0=None, t0=0.0, p0=None, 
-                 sw0=None):
-        super(cExplicit_Problem, self).__init__(y0, t0, p0, sw0)       
-        self.h      # Stepsize 
-        self.p = zeros(1)
-        self.a = zeros(1)
-        if rhs != None:
-            self.rhs = rhs
+    def __init__(self, problem, beta=None, gamma=None):
+		if(beta==None or gamma==None): #No damping
+			self.explicit = True
+		else:
+			self.beta  = beta
+			self.gamma = gamma
+		
+    def step(self,double t,N.ndarray y,double tf,dict opts):
+        cdef double h
+        h = self.options["h"]
+        
+        if t+h < tf:
+            t, y = self._step(t,y,h)
+            return ID_OK, t, y
+        else:
+            h = min(h, abs(tf-t))
+            t, y = self._step(t,y,h)
+            return ID_COMPLETE, t, y
     
-    def handle_result(self, solver, t, y):
-        #import scipy.optimize as so
-        #xmin= so.fmin_bfgs(chebyquad,x,gradchebyquad) 
-        """
-        Method for specifying how the result is to be handled. As default the
-        data is stored in two vectors: solver.(t/y).
-        """
-        i = 0
-        solver.t_sol.extend([t])
-        solver.y_sol.extend([y])
-       
-        ##Store sensitivity result (variable _sensitivity_result are set from the solver by the solver)
-        if self._sensitivity_result == 1:
-            for i in range(solver.problem_info["dimSens"]):
-                solver.p_sol[i] += [solver.interpolate_sensitivity(t, i=i)]
+    def integrate(self, double t,N.ndarray y,double tf, dict opts):
+        cdef double h
+        cdef list tr,yr
+        
+        h = self.options["h"]
+        h = min(h, abs(tf-t))
+        
+        tr = []
+        yr = []
+        
+        while t+h < tf:
+            t, y = self._step(t,y,h)
+            tr.append(t)
+            yr.append(y)
+            h=min(h, abs(tf-t))
+        else:
+            t, y = self._step(t, y, h)
+            tr.append(t)
+            yr.append(y)
+        
+        return ID_COMPLETE, tr, yr
 
 
 def run_example(with_plots=True):
