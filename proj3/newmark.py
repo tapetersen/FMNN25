@@ -5,48 +5,41 @@ from assimulo.problem import Explicit_Problem, cExplicit_Problem
 from assimulo.exception import *
 import numpy as N
 import pylab as P
-from assimulo.solvers import CVode
+from assimulo.explicit_ode import Explicit_ODE
 import nose
 from scipy import double
-
+from assimulo.ode import *
+ID_COMPLETE = 3
 
 class Newmark(Explicit_ODE):
     
-    def __init__(self, problem, beta=None, gamma=None):
-		if(beta==None or gamma==None): #No damping
-			self.explicit = True
-		else:
-			self.beta  = beta
-			self.gamma = gamma
-		
-    def step(self,double t,N.ndarray y,double tf,dict opts):
-        cdef double h
-        h = self.options["h"]
-        
-        if t+h < tf:
-            t, y = self._step(t,y,h)
-            return ID_OK, t, y
+    def __init__(self, problem, v0, beta=None, gamma=None):
+        super(Newmark, self).__init__(problem)
+        self.options["h"] = 0.01
+        self.f  = problem.rhs
+        self.yd1 = N.array([0.0]*len(self.y0))
+        self.v = v0
+        if(beta==None or gamma==None): #No damping
+            self.explicit = True
         else:
-            h = min(h, abs(tf-t))
-            t, y = self._step(t,y,h)
-            return ID_COMPLETE, t, y
+            self.beta  = beta
+            self.gamma = gamma
     
     def _step(self, t, y, h):
-		if(self.explicit):
-			y = y + h*self.v + (h**2 / 2.0) + self.a
-			a = self.problem.rhs(t,y)
-			self.v = self.v + h/2.0 * (a + self.a)
-			self.a = a
+        if(self.explicit):
+            y = y + h*self.v + (h**2 / 2.0) * self.f(t,y,self.v)
+            a = self.f(t,y,self.v)
+            self.v = self.v + h/2.0 * (self.a + a)
+            self.a = a
+            return t+h,y
     
-    def integrate(self, double t,N.ndarray y,double tf, dict opts):
-        cdef double h
-        cdef list tr,yr
-        
+    def integrate(self, t, y, tf,  opts):
         h = self.options["h"]
         h = min(h, abs(tf-t))
-        
         tr = []
         yr = []
+        self.a = self.f(t,y,self.v)
+        print self.a
         
         while t+h < tf:
             t, y = self._step(t,y,h)
@@ -60,5 +53,7 @@ class Newmark(Explicit_ODE):
         
         return ID_COMPLETE, tr, yr
 
+    def print_statistics(self, k):
+        pass 
 
 
