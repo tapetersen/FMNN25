@@ -40,7 +40,6 @@ def run_example(with_plots=True):
 def main():
     import test_integrators as ti
     ti.test_newmark_basic_2nd_order_damping()
-    run_example()
 
 if __name__ == '__main__':
     main()

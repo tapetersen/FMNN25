@@ -9,9 +9,9 @@ from assimulo.explicit_ode import Explicit_ODE
 import nose
 from scipy import double
 from assimulo.ode import *
-import scipy.optimize as so
 import solvers as solvers
 ID_COMPLETE = 3
+
 
 class Newmark(Explicit_ODE):
     
@@ -39,8 +39,11 @@ class Newmark(Explicit_ODE):
                            ((1.0 - 2.*self.beta)*self.a + 2.*self.beta*a_n1))
             f_vn1 = lambda a_n1:  (self.v + h *((1.0-self.gamma)*self.a + self.gamma*a_n1))
             f_an1 = lambda a_n1: abs(a_n1 - (self.f(f_pn1(a_n1),f_vn1(a_n1),a_n1)))
-            print f_an1(self.a)
-            a = so.fmin_bfgs(f_an1,self.a) # Minimize w.r.t. a_n+1
+            solver = solvers.QuasiNewtonBFSG(solvers.OptimizationProblem(f_an1))
+            a = solver.optimize(self.a)
+            
+            #a = so.fmin_bfgs(f_an1,self.a) # Minimize w.r.t. a_n+1
+            
             
             y      = f_pn1(a) # Calculate and store new variables. 
             self.v = f_vn1(a)
