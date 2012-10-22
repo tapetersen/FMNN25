@@ -17,6 +17,7 @@ class Newmark(Explicit_ODE):
     
     def __init__(self, problem, v0, beta=None, gamma=None):
         super(Newmark, self).__init__(problem)
+        self.solver = solvers.QuasiNewtonBFSG(None)
         self.options["h"] = 0.01
         self.f  = problem.rhs
         self.v = v0
@@ -39,8 +40,8 @@ class Newmark(Explicit_ODE):
                            ((1.0 - 2.*self.beta)*self.a + 2.*self.beta*a_n1))
             f_vn1 = lambda a_n1:  (self.v + h *((1.0-self.gamma)*self.a + self.gamma*a_n1))
             f_an1 = lambda a_n1: abs(a_n1 - (self.f(f_pn1(a_n1),f_vn1(a_n1),a_n1)))
-            solver = solvers.QuasiNewtonBFSG(solvers.OptimizationProblem(f_an1))
-            a = solver.optimize(self.a)
+            self.solver.opt_problem = solvers.OptimizationProblem(f_an1)
+            a = self.solver.optimize(self.a)
             
             #a = so.fmin_bfgs(f_an1,self.a) # Minimize w.r.t. a_n+1
             
