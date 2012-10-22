@@ -33,13 +33,16 @@ class Newmark(Explicit_ODE):
             self.v = self.v + h/2.0 * (self.a + a)
             self.a = a
             return t+h,y
-        else: # We must use solvers / implicit form
-            f = lambda p: p - (y + h*self.v + (h**2 / 2.0) * \
-                           ((1.0 - 2.*self.beta)*self.a + 2.*self.beta*self.f(t+h,p,self.v)))
-            y = so.fmin_bfgs(f,y)
-            f = lambda v: v - (self.v + h *((1.0-self.gamma)*self.a + self.gamma*(self.f(t+h,y,v))))
-            self.v = so.fmin_bfgs(f,self.v)
-            self.a = self.f(t+h,y,self.v)
+        else: # We must use solvers / implicit form. 
+            f_pn1 = lambda a_n1:  (y + h*self.v + (h**2 / 2.0) * \
+                           ((1.0 - 2.*self.beta)*self.a + 2.*self.beta*a_n1))
+            f_vn1 = lambda a_n1:  (self.v + h *((1.0-self.gamma)*self.a + self.gamma*a_n1))
+            f_an1 = lambda a_n1: a_n1 - (self.f(f_pn1(a_n1),f_vn1(a_n1),a_n1))
+            a = so.fmin_bfgs(f,self.v) # Minimize w.r.t. a_n+1
+            
+            y      = f_pn1(a) # Calculate and store new variables. 
+            self.v = f_vn1(a)
+            self.a = a
             return t+h, y
             
     def integrate(self, t, y, tf,  opts):
