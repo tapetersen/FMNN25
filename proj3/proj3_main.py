@@ -2,7 +2,6 @@ from scipy       import *
 from matplotlib.pyplot import *
 from numpy import min, max
 from numpy.linalg import norm,solve
-import problem_type as p
 
 def run_example(with_plots=True):
     
@@ -39,6 +38,8 @@ def run_example(with_plots=True):
 
 
 def main():
+    import test_integrators as ti
+    ti.test_newmark_basic_2nd_order_damping()
     run_example()
 
 if __name__ == '__main__':

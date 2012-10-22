@@ -37,8 +37,9 @@ class Newmark(Explicit_ODE):
             f_pn1 = lambda a_n1:  (y + h*self.v + (h**2 / 2.0) * \
                            ((1.0 - 2.*self.beta)*self.a + 2.*self.beta*a_n1))
             f_vn1 = lambda a_n1:  (self.v + h *((1.0-self.gamma)*self.a + self.gamma*a_n1))
-            f_an1 = lambda a_n1: a_n1 - (self.f(f_pn1(a_n1),f_vn1(a_n1),a_n1))
-            a = so.fmin_bfgs(f,self.v) # Minimize w.r.t. a_n+1
+            f_an1 = lambda a_n1: abs(a_n1 - (self.f(f_pn1(a_n1),f_vn1(a_n1),a_n1)))
+            print f_an1(self.a)
+            a = so.fmin_bfgs(f_an1,self.a) # Minimize w.r.t. a_n+1
             
             y      = f_pn1(a) # Calculate and store new variables. 
             self.v = f_vn1(a)
