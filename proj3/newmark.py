@@ -10,6 +10,7 @@ import nose
 from scipy import double
 from assimulo.ode import *
 import scipy.optimize as so
+import solvers as solvers
 ID_COMPLETE = 3
 
 class Newmark(Explicit_ODE):
