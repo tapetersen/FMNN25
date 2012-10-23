@@ -8,6 +8,7 @@ import pylab as P
 from assimulo.explicit_ode import Explicit_ODE
 import nose
 from scipy import double
+from scipy.optimize import newton,brent
 from assimulo.ode import *
 import solvers as solvers
 ID_COMPLETE = 3
@@ -33,10 +34,15 @@ class HHT(Explicit_ODE):
         f_pn1 = lambda a_n1:  (y + h*self.v + (h**2 / 2.0) * \
                        ((1.0 - 2.*self.beta)*self.a + 2.*self.beta*a_n1))
         f_vn1 = lambda a_n1:  (self.v + h *((1.0-self.gamma)*self.a + self.gamma*a_n1))
-        f_an1 = lambda a_n1: abs(a_n1 - ((1.0+self.alpha)*(self.f(f_pn1(a_n1),f_vn1(a_n1),a_n1)) -
-                                 self.alpha * self.f(y,self.v,self.a)))
-        self.solver.opt_problem = solvers.OptimizationProblem(f_an1)
-        a = self.solver.optimize(self.a)  # Minimize w.r.t. a_n+1
+        def f_an1(a_n1):
+            f_n1 = self.f(f_pn1(a_n1),f_vn1(a_n1),t+h)
+            f_n = self.f(y,self.v,t)
+            return abs(a_n1 - ((1.0+self.alpha)*f_n1 - self.alpha*f_n))
+
+        a = brent(f_an1)
+        #f_an1 = lambda a_n1: (1.0+self.alpha)*self.f(f_pn1(a_n1),f_vn1(a_n1),t+h) - self.alpha*self.f(y,self.v,t)
+        #self.solver.opt_problem = solvers.OptimizationProblem(f_an1)
+        #a = self.solver.optimize(self.a)  # Minimize w.r.t. a_n+1
         
         
         y      = f_pn1(a) # Calculate and store new variables. 
