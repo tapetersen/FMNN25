@@ -2,6 +2,7 @@
 from assimulo import testattr
 from assimulo.explicit_ode import *
 from assimulo.problem import Explicit_Problem, cExplicit_Problem
+from assimulo.solvers import LSODAR
 from assimulo.exception import *
 import nose
 from newmark import Newmark
@@ -19,7 +20,7 @@ class mass_spring_damper(object):
 
     def __call__(self, y, yprime, t):
         return -self.omega0**2*y-2*self.zeta*self.omega0*yprime
-
+    
     def explicit(self, t, yprime0, y0):
         if self.zeta == 1.0:
             return (y0+(yprime0+self.omega0*y0))*t*exp(-self.omega0*t)
@@ -90,3 +91,26 @@ def test_hht_basic_2nd_order_spring():
         end = 10.0
         t, y = hht.simulate(end)
         nose.tools.assert_almost_equal(y[-1]/y[-1], ode.explicit(end, v0, y0)/y[-1],places = 1)
+        
+class flattened_2nd_order(object):
+    
+    def __init__(self, mass, k, c):
+        self.ode = mass_spring_damper(mass, k, c)
+        
+    def __call__(self, t, y):
+        y_bis   = self.ode(y[0], y[1], t)
+        y_prime = - y[0] * self.ode.omega0 ** 2.0 / (2.0*self.ode.zeta * self.ode.omega0) - y_bis
+        
+        return array([y_prime,y_bis])
+
+    def explicit(self, t, yprime0, y0):
+        return self.ode.explicit(t, yprime0, y0)
+        
+def test_against_normal_solvers():
+    ode = flattened_2nd_order(3, 2, 3)
+    y0 = 3.0
+    v0 = 2.0
+    prob = Explicit_Problem(ode, [y0,v0])
+    exp_sim = LSODAR(prob)
+    t, y = exp_sim.simulate(3)
+    nose.tools.assert_almost_equal(y[-1][0]/y[-1][0], ode.explicit(3, v0, y0)/y[-1][0],places = 1)
