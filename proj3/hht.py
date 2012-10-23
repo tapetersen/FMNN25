@@ -17,7 +17,6 @@ class HHT(Explicit_ODE):
     
     def __init__(self, problem, v0, alpha):
         super(HHT, self).__init__(problem)
-        self.solver = solvers.QuasiNewtonBFSG(None)
         self.options["h"] = 0.1
         self.f  = problem.rhs
         self.v = v0
