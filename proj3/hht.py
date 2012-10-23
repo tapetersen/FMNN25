@@ -19,7 +19,7 @@ class HHT(Explicit_ODE):
     def __init__(self, problem, v0, alpha):
         super(HHT, self).__init__(problem)
         self.solver = solvers.QuasiNewtonBFSG(None)
-        self.options["h"] = 0.01
+        self.options["h"] = 0.1
         self.f  = problem.rhs
         self.v = v0
         if(alpha < -1.0/3.0 or alpha > 0):
@@ -42,7 +42,7 @@ class HHT(Explicit_ODE):
         a = brent(f_an1)
         #f_an1 = lambda a_n1: (1.0+self.alpha)*self.f(f_pn1(a_n1),f_vn1(a_n1),t+h) - self.alpha*self.f(y,self.v,t)
         #self.solver.opt_problem = solvers.OptimizationProblem(f_an1)
-        #a = self.solver.optimize(self.a)  # Minimize w.r.t. a_n+1
+        #a = newton(f_an1,self.a)  # Minimize w.r.t. a_n+1
         
         
         y      = f_pn1(a) # Calculate and store new variables. 
