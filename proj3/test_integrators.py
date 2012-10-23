@@ -36,16 +36,16 @@ def test_newmark_basic_2nd_order_damping():
             t, y = nmark.simulate(end)
             nose.tools.assert_almost_equal(y[-1], f(end))
 
-    def test_newmark_basic_2nd_order_damping():
-        f  = lambda t: 9.82/2.0 * t**2 + 10*t + 5
-        """ Take off in a rocket at g-acc from 5m above ground, v0 = 10m/s """
-        f2 = lambda t, x, y: 9.82
-        y0 = 5.0
-        v0 = 10.0
-        prob = Explicit_Problem(f2, y0)
-        vals = array([-1.0/3.0,-0.2,-0.1,-0.5,0.0])
-        for alpha in vals:              
-            hht = HHT(prob, v0, beta=beta, gamma=gamma)
-            end = 10.0
-            t, y = hht.simulate(end)
-            nose.tools.assert_almost_equal(y[-1], f(end))
+def test_hht_basic_2nd_order_damping():
+    f  = lambda t: 9.82/2.0 * t**2 + 10*t + 5
+    """ Take off in a rocket at g-acc from 5m above ground, v0 = 10m/s """
+    f2 = lambda t, x, y: 9.82
+    y0 = 5.0
+    v0 = 10.0
+    prob = Explicit_Problem(f2, y0)
+    vals = array([-1.0/3.0,-0.2,-0.1,-0.05,0.0])
+    for alpha in vals:              
+        hht = HHT(prob, v0, alpha = alpha)
+        end = 10.0
+        t, y = hht.simulate(end)
+        nose.tools.assert_almost_equal(y[-1], f(end))
