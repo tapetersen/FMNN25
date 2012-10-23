@@ -7,6 +7,32 @@ import nose
 from newmark import Newmark
 from hht import HHT
 from scipy import array
+from math import sqrt, exp, sin, cos
+
+class mass_spring_damper(object):
+    def __init__(self, mass, k, c):
+        self.mass = float(mass)
+        self.k = float(k)
+        self.c = float(c)
+        self.omega0 = sqrt(self.k/self.mass)
+        self.zeta = c/(2*sqrt(self.mass*self.k))
+
+    def __call__(self, y, yprime, t):
+        return -self.omega0**2*y-2*self.zeta*self.omega0*yprime
+
+    def explicit(self, t, yprime0, y0):
+        if self.zeta == 1.0:
+            return (y0+(yprime0+self.omega0*y0))*t*exp(-self.omega0*t)
+        elif self.zeta > 1.0:
+            raise NotImplemented("Overdamped System")
+        else:
+            omegad = self.omega0*sqrt(1-self.zeta**2)
+            A = y0
+            B = 1/omegad*(self.zeta*self.omega0*y0+yprime0)
+            return (exp(-self.zeta*self.omega0*t)*
+                    (A*cos(omegad*t)+B*sin(omegad*t)))
+
+
 
 def test_newmark_basic_2nd_order_no_damping():
     f  = lambda t: 9.82/2.0 * t**2  + 5
@@ -52,3 +78,15 @@ def test_hht_basic_2nd_order_damping():
         end = 10.0
         t, y = hht.simulate(end)
         nose.tools.assert_almost_equal(y[-1]/y[-1], f(end)/y[-1],places = 1)
+
+def test_hht_basic_2nd_order_spring():
+    y0 = 3.0
+    v0 = 2.0
+    ode = mass_spring_damper(3, 2, 3)
+    prob = Explicit_Problem(ode, y0)
+    vals = array([-1.0/3.0,-0.2,-0.1,-0.05,0.0])
+    for alpha in vals:              
+        hht = HHT(prob, v0, alpha = alpha)
+        end = 10.0
+        t, y = hht.simulate(end)
+        nose.tools.assert_almost_equal(y[-1]/y[-1], ode.explicit(end, v0, y0)/y[-1],places = 1)
