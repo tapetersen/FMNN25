@@ -10,7 +10,7 @@ import nose
 from scipy import double
 from assimulo.ode import *
 import solvers as solvers
-from scipy.optimize import newton,brent
+from scipy.optimize import fsolve
 ID_COMPLETE = 3
 
 
@@ -18,7 +18,7 @@ class Newmark(Explicit_ODE):
     
     def __init__(self, problem, v0, beta=None, gamma=None):
         super(Newmark, self).__init__(problem)
-        self.solver = solvers.QuasiNewtonBFSG(None)
+        self.solver = fsolve
         self.options["h"] = 0.1
         self.f  = problem.rhs
         self.v = v0
@@ -40,9 +40,9 @@ class Newmark(Explicit_ODE):
             f_pn1 = lambda a_n1:  (y + h*self.v + (h**2 / 2.0) * \
                            ((1.0 - 2.*self.beta)*self.a + 2.*self.beta*a_n1))
             f_vn1 = lambda a_n1:  (self.v + h *((1.0-self.gamma)*self.a + self.gamma*a_n1))
-            f_an1 = lambda a_n1: abs(a_n1 - (self.f(f_pn1(a_n1),f_vn1(a_n1),t+h)))
+            f_an1 = lambda a_n1: a_n1 - (self.f(f_pn1(a_n1),f_vn1(a_n1),t+h))
             
-            a = brent(f_an1)  # Minimize w.r.t. a_n+1
+            a = fsolve(f_an1, self.a)
             
             y      = f_pn1(a) # Calculate and store new variables. 
             self.v = f_vn1(a)

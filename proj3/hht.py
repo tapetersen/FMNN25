@@ -8,7 +8,7 @@ import pylab as P
 from assimulo.explicit_ode import Explicit_ODE
 import nose
 from scipy import double
-from scipy.optimize import fsolve
+from scipy.optimize import newton_krylov
 from assimulo.ode import *
 ID_COMPLETE = 3
 
@@ -17,6 +17,7 @@ class HHT(Explicit_ODE):
     
     def __init__(self, problem, v0, alpha):
         super(HHT, self).__init__(problem)
+        self.solver = newton_krylov
         self.options["h"] = 0.1
         self.f  = problem.rhs
         self.v = v0
@@ -29,17 +30,15 @@ class HHT(Explicit_ODE):
     
     def _step(self, t, y, h):        
         # We must use solvers / implicit form
-        f_pn1 = lambda a_n1:  (y + h*self.v + (h**2 / 2.0) * \
+        f_pn1 = lambda a_n1: (y + h*self.v + (h**2 / 2.0) * \
                        ((1.0 - 2.*self.beta)*self.a + 2.*self.beta*a_n1))
-        f_vn1 = lambda a_n1:  (self.v + h *((1.0-self.gamma)*self.a + self.gamma*a_n1))
+        f_vn1 = lambda a_n1: (self.v + h*((1.0-self.gamma)*self.a + self.gamma*a_n1))
         def f_an1(a_n1):
             f_n1 = self.f(f_pn1(a_n1),f_vn1(a_n1),t+h)
             f_n = self.f(y,self.v,t)
             return a_n1 - ((1.0+self.alpha)*f_n1 - self.alpha*f_n)
 
-        a = fsolve(f_an1, self.a)
-        
-        
+        a = self.solver(f_an1, self.a)
         y      = f_pn1(a) # Calculate and store new variables. 
         self.v = f_vn1(a)
         self.a = a
