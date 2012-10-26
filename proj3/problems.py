@@ -104,7 +104,7 @@ class Truck(object):
             x=np.array(x+xd+la)
             return x
             
-    def fcn(self, t, x, xdot_param=None):
+   def fcn(self, t, x, xdot_param=None):
         """
         Right hand side function (unconstrained)
               or residual function      (constrained)
@@ -352,11 +352,20 @@ class Pendulum2nd(object):
         self.ggr=9.81
         self.m=1.
         self.L=1.
+
     def initial_condition(self):
         x=[np.pi/2.,0.]
         return x
-    def fcn(self,t,x,xd):
+
+    def fcn(self,x,xprime,t):
         alpha=x   # position
-        alphad=xd  # velocity
+        alphad=xprime  # velocity
         alphadd=-self.ggr/self.L * sin(alpha)
         return alphadd
+
+    def fcn_1(self,t,x):
+        alpha=x[0]   # position
+        alphad=x[1]  # velocity
+        alphadd=-self.ggr/self.L * sin(alpha)
+
+        return [alphad, alphadd]
