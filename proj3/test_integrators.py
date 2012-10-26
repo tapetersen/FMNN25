@@ -154,9 +154,9 @@ def test_truck_LSODAR():
     show()
 
 
-def test_pend_agains_normal():
+def test_pend_hht_against_normal():
     import problems as p
-    from matplotlib.pylab import plot, show
+    from matplotlib.pylab import plot, show, figure
     pend = p.Pendulum2nd()
     ode  = pend.fcn
     end = 15
@@ -168,9 +168,28 @@ def test_pend_agains_normal():
     ode  = pend.fcn_1
     prob = Explicit_Problem(ode, y0)
     sim = LSODAR(prob)
-    t, y_2 = hht.simulate(end)
+    t, y_3 = sim.simulate(end)
     
-    nose.tools.assert_almost_equal(y_2[-1][0]/y_2[-1][0], y_1[-1]/y_2[-1][0],places = 1)
+    nose.tools.assert_almost_equal(y_3[-1][0]/y_3[-1][0], y_1[-1]/y_3[-1][0],places = 1)
+    
+
+def test_pend_newmark_against_normal():
+    import problems as p
+    from matplotlib.pylab import plot, show
+    pend = p.Pendulum2nd()
+    ode  = pend.fcn
+    end = 15
+    y0   = pend.initial_condition()
+    prob = Explicit_Problem(ode, y0[0])
+    nmark = Newmark(prob, y0[1], beta = .7, gamma = .5)
+    t, y_2 = nmark.simulate(end)
+    
+    ode  = pend.fcn_1
+    prob = Explicit_Problem(ode, y0)
+    sim = LSODAR(prob)
+    t, y_3 = sim.simulate(end)
+    
+    nose.tools.assert_almost_equal(y_3[-1][0]/y_3[-1][0], y_2[-1]/y_3[-1][0],places = 1)
     
     
 

@@ -19,7 +19,7 @@ class Newmark(Explicit_ODE):
     def __init__(self, problem, v0, beta=None, gamma=None):
         super(Newmark, self).__init__(problem)
         self.solver = fsolve
-        self.options["h"] = 0.1
+        self.options["h"] = 0.01
         self.f  = problem.rhs
         self.v = v0
         if(beta is not None and gamma is not None): 
