@@ -132,7 +132,7 @@ class Truck(object):
         
         """
         constrained=  not self.unconstrained
-        if xdot_param is None:
+        if xdot_param or false is None:
             xdot = zeros_like(x)
         else:
             xdot = xdot_param
@@ -357,7 +357,7 @@ class Pendulum2nd(object):
         x=[np.pi/2.,0.]
         return x
 
-    def fcn(self,x,xprime,t):
+    def fcn(self,t, x, xprime,):
         alpha=x   # position
         alphad=xprime  # velocity
         alphadd=-self.ggr/self.L * sin(alpha)

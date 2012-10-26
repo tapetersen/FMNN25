@@ -40,7 +40,7 @@ class Newmark(Explicit_ODE):
             f_pn1 = lambda a_n1:  (y + h*self.v + (h**2 / 2.0) * \
                            ((1.0 - 2.*self.beta)*self.a + 2.*self.beta*a_n1))
             f_vn1 = lambda a_n1:  (self.v + h *((1.0-self.gamma)*self.a + self.gamma*a_n1))
-            f_an1 = lambda a_n1: a_n1 - (self.f(f_pn1(a_n1),f_vn1(a_n1),t+h))
+            f_an1 = lambda a_n1: a_n1 - (self.f(t+h,f_pn1(a_n1),f_vn1(a_n1)))
             
             a = fsolve(f_an1, self.a)
             

@@ -3,6 +3,7 @@ from assimulo import testattr
 from assimulo.explicit_ode import *
 from assimulo.problem import Explicit_Problem, cExplicit_Problem
 from assimulo.solvers import LSODAR
+from assimulo.solvers import LSODAR
 from assimulo.exception import *
 import nose
 from newmark import Newmark
@@ -19,7 +20,7 @@ class mass_spring_damper(object):
         self.omega0 = sqrt(self.k/self.mass)
         self.zeta = c/(2*sqrt(self.mass*self.k))
 
-    def __call__(self, y, yprime, t):
+    def __call__(self, t, y, yprime):
         return -self.omega0**2*y-2*self.zeta*self.omega0*yprime
     
     def explicit(self, t, yprime0, y0):
@@ -52,7 +53,7 @@ def test_newmark_basic_2nd_order_no_damping():
 def test_newmark_basic_2nd_order_damping():
     f  = lambda t: 5.0/3.0* t**3 + 2*t + 3
     """ Take off in a rocket at g-acc from 5m above ground, v0 = 10m/s """
-    def ode_2(x,y,t):
+    def ode_2(t,x,y):
         return 10.0 * t
     y0 = 3.0
     v0 = 2.0
@@ -68,8 +69,7 @@ def test_newmark_basic_2nd_order_damping():
 def test_hht_basic_2nd_order_damping():
     f  = lambda t: 5.0/3.0* t**3 + 2*t + 3
     """ Take off in a rocket at g-acc from 5m above ground, v0 = 10m/s """
-    #f2 = lambda x, y, t: 10.0 * t
-    def ode_2(x,y,t):
+    def ode_2(t,x,y):
         return 10.0 * t
     y0 = 3.0
     v0 = 2.0
@@ -135,6 +135,21 @@ def test_truck_hht():
     t, y = hht.simulate(end)
     for i in y0.size:
         plot(t, y[:,i])
+
+    show()
+
+def test_truck_LSODAR():
+    return
+    from problems import Truck
+    end = 1.0
+    t = Truck()
+    ode = t.fcn
+    x0 = t.initial_conditions()
+    prob = Explicit_Problem(ode, x0)
+    sim = LSODAR(prob)
+    t, x = sim.simulate(end)
+    for i in x0.size:
+        plot(t, x[:,i])
 
     show()
 

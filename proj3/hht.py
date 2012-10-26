@@ -34,8 +34,8 @@ class HHT(Explicit_ODE):
                        ((1.0 - 2.*self.beta)*self.a + 2.*self.beta*a_n1))
         f_vn1 = lambda a_n1: (self.v + h*((1.0-self.gamma)*self.a + self.gamma*a_n1))
         def f_an1(a_n1):
-            f_n1 = self.f(f_pn1(a_n1),f_vn1(a_n1),t+h)
-            f_n = self.f(y,self.v,t)
+            f_n1 = self.f(t+h,f_pn1(a_n1),f_vn1(a_n1))
+            f_n = self.f(t,y,self.v,)
             return a_n1 - ((1.0+self.alpha)*f_n1 - self.alpha*f_n)
 
         a = self.solver(f_an1, self.a)
