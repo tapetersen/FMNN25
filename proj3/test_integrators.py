@@ -147,12 +147,15 @@ def test_pend_agains_normal():
     end = 15
     y0   = pend.initial_condition()
     prob = Explicit_Problem(ode, y0[0])
-    #prob = Explicit_Problem(ode, y0)
     hht = HHT(prob, y0[1], alpha=-0.2)
-    #hht = Newmark(prob, 0.0, beta=0.33, gamma=0.33)
-    #hht = LSODAR(prob)
+    t, y_1 = hht.simulate(end)
+    
+    ode  = pend.fcn_1
+    prob = Explicit_Problem(ode, y0)
+    sim = LSODAR(prob)
     t, y_2 = hht.simulate(end)
-    plot(t, y_2)
-    show()
+    
+    nose.tools.assert_almost_equal(y_2[-1][0]/y_2[-1][0], y_1[-1]/y_1[-1][0],places = 1)
+    
     
 

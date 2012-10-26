@@ -104,7 +104,7 @@ class Truck(object):
             x=np.array(x+xd+la)
             return x
             
-   def fcn(self, t, x, xdot_param=None):
+    def fcn(self, t, x, xdot_param=None):
         """
         Right hand side function (unconstrained)
               or residual function      (constrained)
