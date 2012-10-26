@@ -114,6 +114,7 @@ def test_against_normal_solvers():
     prob = Explicit_Problem(ode, [y0,v0])
     exp_sim = LSODAR(prob)
     t, y = exp_sim.simulate(end)
+    
     ode = mass_spring_damper(3, 2, 3)
     prob = Explicit_Problem(ode, y0)
     hht = HHT(prob, v0, alpha = -0.2)
@@ -121,10 +122,17 @@ def test_against_normal_solvers():
     print y[-1][0], y_2[-1]
     nose.tools.assert_almost_equal(y[-1][0]/y[-1][0], y_2[-1]/y[-1][0],places = 1)
 
-#def test_pend_agains_normal():
-    #import testProblem2ndODE as tp
-    #pend = tp.Pendulum2nd()
-    #ODE  = pend.fcn()
-    #y0   = pend.initial_condition()
+def test_pend_agains_normal():
+    import testproblem2ndODE as tp
+    from matplotlib.pylab import plot
+    pend = tp.Pendulum2nd()
+    ode  = pend.fcn
+    end = 15
+    y0   = pend.initial_condition()
+    prob = Explicit_Problem(ode, y0[0])
+    #hht = HHT(prob, y0[1], alpha = -0.2)
+    hht = Newmark(prob, y0[1], beta=0.33, gamma=0.33)
+    t, y_2 = hht.simulate(end)
+    plot(t, y_2)
     
 
