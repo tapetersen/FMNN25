@@ -107,10 +107,24 @@ class flattened_2nd_order(object):
         return self.ode.explicit(t, yprime0, y0)
         
 def test_against_normal_solvers():
+    end = 10.0
     ode = flattened_2nd_order(3, 2, 3)
     y0 = 3.0
     v0 = 2.0
     prob = Explicit_Problem(ode, [y0,v0])
     exp_sim = LSODAR(prob)
-    t, y = exp_sim.simulate(3)
-    nose.tools.assert_almost_equal(y[-1][0]/y[-1][0], ode.explicit(3, v0, y0)/y[-1][0],places = 1)
+    t, y = exp_sim.simulate(end)
+    ode = mass_spring_damper(3, 2, 3)
+    prob = Explicit_Problem(ode, y0)
+    hht = HHT(prob, v0, alpha = -0.2)
+    t, y_2 = hht.simulate(end)
+    print y[-1][0], y_2[-1]
+    nose.tools.assert_almost_equal(y[-1][0]/y[-1][0], y_2[-1]/y[-1][0],places = 1)
+
+#def test_pend_agains_normal():
+    #import testProblem2ndODE as tp
+    #pend = tp.Pendulum2nd()
+    #ODE  = pend.fcn()
+    #y0   = pend.initial_condition()
+    
+
