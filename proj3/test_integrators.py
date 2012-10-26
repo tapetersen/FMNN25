@@ -13,6 +13,8 @@ from numpy import zeros_like
 from math import sqrt, exp, sin, cos
 
 class mass_spring_damper(object):
+    """ A class used in the spring damper test. Contains a function 
+    to retrieve ybis and a function for the analytic solution """
     def __init__(self, mass, k, c):
         self.mass = float(mass)
         self.k = float(k)
@@ -38,6 +40,8 @@ class mass_spring_damper(object):
 
 
 def test_newmark_basic_2nd_order_no_damping():
+    """ Test the explicit case of newmark of simple a 2nd order ODE, 
+    ybis = constant"""
     f  = lambda t: 9.82/2.0 * t**2  + 5
     """ Take off in a rocket at g-acc from 5m above grounds """
     f2 = lambda t, x, y: 9.82
@@ -51,6 +55,9 @@ def test_newmark_basic_2nd_order_no_damping():
     nose.tools.assert_almost_equal(y[-1], f(end))
 
 def test_newmark_basic_2nd_order_damping():
+    """ Test the implicit case of newmark of simple a 2nd order ODE, 
+    ybis(t) = constant* t. Tests for several values of beta and gamma. 
+    """
     f  = lambda t: 5.0/3.0* t**3 + 2*t + 3
     """ Take off in a rocket at g-acc from 5m above ground, v0 = 10m/s """
     def ode_2(t,x,y):
@@ -67,6 +74,9 @@ def test_newmark_basic_2nd_order_damping():
             nose.tools.assert_almost_equal(y[-1]/y[-1], f(end)/y[-1],places = 1)
 
 def test_hht_basic_2nd_order_damping():
+    """ Test hht of simple a 2nd order ODE, 
+    ybis(t) = constant* t. Tests for several values of alpha. 
+    """
     f  = lambda t: 5.0/3.0* t**3 + 2*t + 3
     """ Take off in a rocket at g-acc from 5m above ground, v0 = 10m/s """
     def ode_2(t,x,y):
@@ -82,6 +92,9 @@ def test_hht_basic_2nd_order_damping():
         nose.tools.assert_almost_equal(y[-1]/y[-1], f(end)/y[-1],places = 1)
 
 def test_hht_basic_2nd_order_spring():
+    """ Test the hht method for a spring system.
+    Tests for several values of alpha. 
+    """
     y0 = 3.0
     v0 = 2.0
     ode = mass_spring_damper(3, 2, 3)
@@ -94,7 +107,8 @@ def test_hht_basic_2nd_order_spring():
         nose.tools.assert_almost_equal(y[-1]/y[-1], ode.explicit(end, v0, y0)/y[-1],places = 1)
         
 class flattened_2nd_order(object):
-    
+    """ Used to convert the mass damper ODE to form that can be simulated
+    using assimulo"""
     def __init__(self, mass, k, c):
         self.ode = mass_spring_damper(mass, k, c)
         
@@ -108,6 +122,9 @@ class flattened_2nd_order(object):
         return self.ode.explicit(t, yprime0, y0)
         
 def test_against_normal_solvers():
+    """ Test the HHT method on the damper system and compares the
+    result against a simulation using LSODAR 
+    """
     end = 10.0
     ode = flattened_2nd_order(3, 2, 3)
     y0 = 3.0
@@ -155,6 +172,8 @@ def test_truck_LSODAR():
 
 
 def test_pend_hht_against_normal():
+    """ Test out hht solver againts the pendulum by comparing the result
+    of a simulation against one done by assimulo"""
     import problems as p
     from matplotlib.pylab import plot, show, figure
     pend = p.Pendulum2nd()
@@ -174,6 +193,8 @@ def test_pend_hht_against_normal():
     
 
 def test_pend_newmark_against_normal():
+    """ Test out newmark solver againts the pendulum by comparing the result
+    of a simulation against one done by assimulo"""
     import problems as p
     from matplotlib.pylab import plot, show
     pend = p.Pendulum2nd()
