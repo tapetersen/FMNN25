@@ -155,7 +155,7 @@ def test_pend_agains_normal():
     sim = LSODAR(prob)
     t, y_2 = hht.simulate(end)
     
-    nose.tools.assert_almost_equal(y_2[-1][0]/y_2[-1][0], y_1[-1]/y_1[-1][0],places = 1)
+    nose.tools.assert_almost_equal(y_2[-1][0]/y_2[-1][0], y_1[-1]/y_2[-1][0],places = 1)
     
     
 
