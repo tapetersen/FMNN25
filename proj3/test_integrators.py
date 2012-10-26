@@ -8,6 +8,7 @@ import nose
 from newmark import Newmark
 from hht import HHT
 from scipy import array
+from numpy import zeros_like
 from math import sqrt, exp, sin, cos
 
 class mass_spring_damper(object):
@@ -122,17 +123,36 @@ def test_against_normal_solvers():
     print y[-1][0], y_2[-1]
     nose.tools.assert_almost_equal(y[-1][0]/y[-1][0], y_2[-1]/y[-1][0],places = 1)
 
+def test_truck_hht():
+    from problems import Truck
+    end = 10.0
+    t = Truck()
+    ode = t.fcn
+    y0 = t.initial_conditions()
+    v0 = zeros_like(y0)
+    prob = Explicit_Problem(ode, y0)
+    hht = HHT(prob, v0, alpha = -0.2)
+    t, y = hht.simulate(end)
+    for i in y0.size:
+        plot(t, y[:,i])
+
+    show()
+
+
 def test_pend_agains_normal():
-    import testproblem2ndODE as tp
-    from matplotlib.pylab import plot
-    pend = tp.Pendulum2nd()
+    import problems as p
+    from matplotlib.pylab import plot, show
+    pend = p.Pendulum2nd()
     ode  = pend.fcn
     end = 15
     y0   = pend.initial_condition()
     prob = Explicit_Problem(ode, y0[0])
-    #hht = HHT(prob, y0[1], alpha = -0.2)
-    hht = Newmark(prob, y0[1], beta=0.33, gamma=0.33)
+    #prob = Explicit_Problem(ode, y0)
+    hht = HHT(prob, y0[1], alpha=-0.2)
+    #hht = Newmark(prob, 0.0, beta=0.33, gamma=0.33)
+    #hht = LSODAR(prob)
     t, y_2 = hht.simulate(end)
     plot(t, y_2)
+    show()
     
 

@@ -355,8 +355,8 @@ class Pendulum2nd(object):
     def initial_condition(self):
         x=[np.pi/2.,0.]
         return x
-    def fcn(self,t,x):
-        alpha=x[0]   # position
-        alphad=x[1]  # velocity
+    def fcn(self,t,x,xd):
+        alpha=x   # position
+        alphad=xd  # velocity
         alphadd=-self.ggr/self.L * sin(alpha)
         return alphadd
