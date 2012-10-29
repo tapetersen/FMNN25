@@ -113,8 +113,8 @@ class flattened_2nd_order(object):
         self.ode = mass_spring_damper(mass, k, c)
         
     def __call__(self, t, y):
-        y_bis   = self.ode(y[0], y[1], t)
-        y_prime = - y[0] * self.ode.omega0 ** 2.0 / (2.0*self.ode.zeta * self.ode.omega0) - y_bis
+        y_bis   = self.ode(t, y[0], y[1])
+        y_prime = y[1]
         
         return array([y_prime,y_bis])
 
@@ -137,38 +137,7 @@ def test_against_normal_solvers():
     prob = Explicit_Problem(ode, y0)
     hht = HHT(prob, v0, alpha = -0.2)
     t, y_2 = hht.simulate(end)
-    print y[-1][0], y_2[-1]
     nose.tools.assert_almost_equal(y[-1][0]/y[-1][0], y_2[-1]/y[-1][0],places = 1)
-
-def test_truck_hht():
-    from problems import Truck
-    end = 10.0
-    t = Truck()
-    ode = t.fcn
-    y0 = t.initial_conditions()
-    v0 = zeros_like(y0)
-    prob = Explicit_Problem(ode, y0)
-    hht = HHT(prob, v0, alpha = -0.2)
-    t, y = hht.simulate(end)
-    for i in y0.size:
-        plot(t, y[:,i])
-
-    show()
-
-def test_truck_LSODAR():
-    return
-    from problems import Truck
-    end = 1.0
-    t = Truck()
-    ode = t.fcn
-    x0 = t.initial_conditions()
-    prob = Explicit_Problem(ode, x0)
-    sim = LSODAR(prob)
-    t, x = sim.simulate(end)
-    for i in x0.size:
-        plot(t, x[:,i])
-
-    show()
 
 
 def test_pend_hht_against_normal():

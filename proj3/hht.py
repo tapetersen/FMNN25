@@ -14,10 +14,15 @@ ID_COMPLETE = 3
 
 
 class HHT(Explicit_ODE):
+    """ Solves a second order ODE using HHT method.
+    Takes an instance of a problem (Explicit problem) 
+    and initial conditions for yprime
+    """
     
     def __init__(self, problem, v0, alpha):
+        """ Initialize solver, calculate gamma and beta,s store functions etc """
         super(HHT, self).__init__(problem)
-        self.solver = newton_krylov
+        self.solver = newton_krylov # Why not =)
         self.options["h"] = 0.01
         self.f  = problem.rhs
         self.v = v0
@@ -28,7 +33,9 @@ class HHT(Explicit_ODE):
         self.beta  = ( (1.0 - alpha)/2.0 )**2
         self.gamma = (1.0 - 2.0 * alpha)/2.0
     
-    def _step(self, t, y, h):        
+    def _step(self, t, y, h):    
+        """ Used to take a step in the integrate method while
+        simulating"""
         # We must use solvers / implicit form
         f_pn1 = lambda a_n1: (y + h*self.v + (h**2 / 2.0) * \
                        ((1.0 - 2.*self.beta)*self.a + 2.*self.beta*a_n1))
@@ -45,6 +52,9 @@ class HHT(Explicit_ODE):
         return t+h, y
             
     def integrate(self, t, y, tf,  opts):
+        """ Main method used when simulating
+        Takes step with constant stepsize until the final time
+        is reached."""
         h = self.options["h"]
         h = min(h, abs(tf-t))
         tr = []
